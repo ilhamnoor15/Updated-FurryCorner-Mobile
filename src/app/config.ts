@@ -1,7 +1,7 @@
 // Address of your PHP API (the furrycorner_api folder).
 // A phone cannot reach "localhost" on your PC - use your PC's LAN IP (run `ipconfig`, look for IPv4),
 // or your hosted server URL later. No trailing slash.
-export const API_BASE = 'https://providing-glacial-gradually.ngrok-free.dev';
+export const API_BASE = 'https://furrycorner.online/furrycorner_api';
 
 // Phones that draw the app edge-to-edge (behind the status bar and the gesture bar) report the size of those
 // bars to the page. If a phone reports nothing, these fallbacks (in px) keep the top bar and the bottom tabs
