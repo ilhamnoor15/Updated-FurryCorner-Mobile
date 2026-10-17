@@ -1,0 +1,13 @@
+/*
+ * Global styles.
+ *
+ * The Ionic CSS imports are switched OFF on purpose. Ionic's structure.css makes <body> a fixed,
+ * non-scrolling box, which breaks the old FurryCorner pages (they scroll the whole page).
+ * Turn these back on page by page, once a page is rewritten with <ion-content>.
+ */
+
+/* @import "@ionic/angular/css/core.css"; */
+/* @import "@ionic/angular/css/normalize.css"; */
+/* @import "@ionic/angular/css/structure.css"; */
+/* @import "@ionic/angular/css/typography.css"; */
+/* @import "@ionic/angular/css/display.css"; */

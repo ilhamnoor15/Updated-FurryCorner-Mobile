@@ -1,0 +1,765 @@
+// @ts-nocheck  (legacy script below is plain JavaScript carried over from checkout.html)
+import { Component } from '@angular/core';
+import { LegacyPage } from '../../legacy/legacy-page';
+import { HTML, CSS, TITLE, BODY_CLASS } from './checkout.markup';
+import { supabase } from '../../../services/supabase.service';
+import { API_BASE } from '../../config';
+
+@Component({
+  selector: 'app-checkout',
+  standalone: true,
+  template: '<div class="legacy-root" #host></div>',
+  styles: [':host, .legacy-root { display: contents; }'],
+})
+export class CheckoutPage extends LegacyPage {
+  protected markup = { html: HTML, css: CSS, title: TITLE, bodyClass: BODY_CLASS };
+
+  // Original <script> code of checkout.html. `location` is a shim that routes through the Angular Router.
+  protected run(location: any, __onReady: any): void {
+
+/* =====================================================
+   REQUIRE LOGIN
+===================================================== */
+
+const loggedUser =
+    JSON.parse(
+        localStorage.getItem('loggedInUser') || 'null'
+    );
+
+const userId =
+    localStorage.getItem('loggedInUserId') ||
+    loggedUser?.user_id ||
+    loggedUser?.id;
+
+
+if(!userId){
+    location.replace('signin.html?return=checkout.html');
+
+}
+
+/* =====================================================
+   BACK BUTTON
+===================================================== */
+
+const backButton =
+    document.getElementById('backButton');
+
+backButton.addEventListener('click', () => {
+
+    if(window.history.length > 1){
+
+        window.history.back();
+
+    }else{
+
+        location.href =
+            'index.html';
+
+    }
+
+});
+
+
+/* =====================================================
+   PAYMENT OPTIONS
+===================================================== */
+
+const paymentOptions =
+    document.querySelectorAll(
+        '.payment-option'
+    );
+
+
+const paymentDetails = {
+
+    cod:null,
+
+    gcash:null,
+
+    card:
+        document.getElementById(
+            'cardDetails'
+        ),
+
+    saved:
+        document.getElementById(
+            'savedPaymentDetails'
+        )
+
+};
+
+const savedAddressGroup = document.getElementById('savedAddressGroup');
+const savedAddressSelect = document.getElementById('savedAddressSelect');
+const savedPaymentOption = document.getElementById('savedPaymentOption');
+const savedPaymentSelect = document.getElementById('savedPaymentSelect');
+const savedPaymentSummary = document.getElementById('savedPaymentSummary');
+let savedCheckoutAddresses = [];
+let savedPaymentMethods = [];
+
+
+paymentOptions.forEach(option => {
+
+    option.addEventListener(
+        'click',
+        () => {
+
+
+            /* Remove active from all */
+
+            paymentOptions.forEach(opt => {
+
+                opt.classList.remove(
+                    'active'
+                );
+
+            });
+
+
+            /* Activate selected */
+
+            option.classList.add(
+                'active'
+            );
+
+
+            /* Hide all payment details */
+
+            Object.values(
+                paymentDetails
+            ).forEach(detail => {
+
+                if(detail){
+
+                    detail.classList.remove(
+                        'active'
+                    );
+
+                }
+
+            });
+
+
+            /* Get selected payment */
+
+            const paymentType =
+                option.dataset.payment;
+
+
+            /* Show selected details */
+
+            if(
+                paymentDetails[paymentType]
+            ){
+
+                paymentDetails[
+                    paymentType
+                ].classList.add(
+                    'active'
+                );
+
+            }
+
+
+            /* Check radio */
+
+            const radio =
+                option.querySelector(
+                    'input[type="radio"]'
+                );
+
+            if(radio){
+
+                radio.checked = true;
+
+            }
+
+        }
+    );
+
+});
+
+
+function applySavedAddress(address){
+    document.getElementById('firstName').value = address.first_name || '';
+    document.getElementById('lastName').value = address.last_name || '';
+    document.getElementById('address').value = address.address_line || '';
+    document.getElementById('city').value = address.city || '';
+    document.getElementById('province').value = address.province || '';
+    document.getElementById('postalCode').value = address.postal_code || '';
+    document.getElementById('phone').value = address.phone || '';
+}
+
+async function loadSavedCheckoutDetails() {
+    try {
+        if (!userId) {
+            throw new Error('Please sign in to continue checkout.');
+        }
+
+        // Load this user's saved addresses.
+        const { data: addresses, error: addressError } = await supabase
+            .from('user_addresses')
+            .select('*')
+            .eq('user_id', userId)
+            .order('is_default', { ascending: false })
+            .order('created_at', { ascending: false });
+
+        if (addressError) throw addressError;
+
+        savedCheckoutAddresses = (addresses || []).map(address => {
+            const nameParts = (address.recipient_name || '').trim().split(/\s+/);
+            return {
+                ...address,
+                address_id: address.id,
+                address_label: address.label || 'My address',
+                first_name: nameParts.shift() || '',
+                last_name: nameParts.join(' ')
+            };
+        });
+
+        savedAddressSelect.replaceChildren();
+
+        if (savedCheckoutAddresses.length) {
+            savedCheckoutAddresses.forEach(address => {
+                const option = document.createElement('option');
+                option.value = String(address.address_id);
+                option.textContent =
+                    `${address.address_label} - ${address.address_line}, ${address.city || ''}`;
+                savedAddressSelect.append(option);
+            });
+
+            savedAddressGroup.hidden = false;
+
+            const defaultAddress =
+                savedCheckoutAddresses.find(address => address.is_default) ||
+                savedCheckoutAddresses[0];
+
+            savedAddressSelect.value = String(defaultAddress.address_id);
+            applySavedAddress(defaultAddress);
+        }
+
+        // Load this user's saved payment methods.
+        const { data: methods, error: methodsError } = await supabase
+            .from('payment_methods')
+            .select('*')
+            .eq('user_id', userId)
+            .order('is_default', { ascending: false })
+            .order('created_at', { ascending: false });
+
+        if (methodsError) throw methodsError;
+
+        savedPaymentMethods = (methods || []).map(method => ({
+            ...method,
+            payment_method_id: method.id,
+            method_type: method.card_brand ? 'card' : 'bank',
+            method_label: method.card_brand
+                ? method.card_brand
+                : (method.provider || 'Payment method')
+        }));
+
+        savedPaymentSelect.replaceChildren();
+
+        if (savedPaymentMethods.length) {
+            savedPaymentMethods.forEach(method => {
+                const option = document.createElement('option');
+                option.value = String(method.payment_method_id);
+
+                const type = method.method_type === 'card' ? 'Card' : 'Bank account';
+                option.textContent =
+                    `${method.method_label} - ${type} ending in ${method.last_four || '****'}`;
+
+                savedPaymentSelect.append(option);
+            });
+
+            savedPaymentOption.hidden = false;
+
+            const defaultMethod =
+                savedPaymentMethods.find(method => method.is_default) ||
+                savedPaymentMethods[0];
+
+            savedPaymentSelect.value = String(defaultMethod.payment_method_id);
+            savedPaymentSummary.textContent =
+                `Selected: ${defaultMethod.method_label} ending in ${defaultMethod.last_four || '****'}`;
+        } else {
+            savedPaymentOption.hidden = true;
+        }
+    } catch (error) {
+        console.error('Unable to load saved checkout details:', error);
+    }
+}
+
+
+savedAddressSelect.addEventListener('change', () => {
+    const selectedAddress = savedCheckoutAddresses.find(
+        address => String(address.address_id) === savedAddressSelect.value
+    );
+    if(selectedAddress) applySavedAddress(selectedAddress);
+});
+
+
+savedPaymentSelect.addEventListener('change', () => {
+    const selectedMethod = savedPaymentMethods.find(
+        method => String(method.payment_method_id) === savedPaymentSelect.value
+    );
+    if(selectedMethod){
+        savedPaymentSummary.textContent = `Selected: ${selectedMethod.method_label} ending in ${selectedMethod.last_four}`;
+    }
+});
+
+
+/* =====================================================
+   GET CART TOTAL
+===================================================== */
+
+const orderTotal =
+    document.getElementById(
+        'orderTotal'
+    );
+
+
+function updateOrderTotal(){
+
+    const items =
+        JSON.parse(
+            localStorage.getItem(
+                'checkoutItems'
+            ) || '[]'
+        );
+
+
+    const total =
+        items.reduce(
+            (sum, item) => {
+
+                return sum +
+                    (
+                        Number(item.price) *
+                        Number(item.quantity || 0)
+                    );
+
+            },
+            0
+        );
+
+
+    orderTotal.textContent =
+        '₱' + total.toFixed(2);
+
+}
+
+
+/* =====================================================
+   SUCCESS MODAL
+===================================================== */
+
+const successModalBackdrop =
+    document.getElementById(
+        'successModalBackdrop'
+    );
+
+
+const continueShoppingBtn =
+    document.getElementById(
+        'continueShoppingBtn'
+    );
+
+
+const viewOrderBtn =
+    document.getElementById(
+        'viewOrderBtn'
+    );
+
+
+function openSuccessModal(){
+
+    successModalBackdrop.classList.add(
+        'open'
+    );
+
+}
+
+
+function closeSuccessModal(){
+
+    successModalBackdrop.classList.remove(
+        'open'
+    );
+
+}
+
+
+continueShoppingBtn.addEventListener(
+
+    'click',
+
+    () => {
+
+        /* Clear cart after successful order */
+
+        localStorage.removeItem('cart');
+
+
+        /* Close modal before redirect */
+
+        closeSuccessModal();
+
+
+        /* Return to home page */
+
+        location.href =
+            'index.html';
+
+    }
+
+);
+
+
+/* =====================================================
+   VIEW ORDER
+===================================================== */
+
+viewOrderBtn.addEventListener(
+    'click',
+    () => {
+
+        const lastOrderId =
+            localStorage.getItem('lastOrderId');
+
+        if (!lastOrderId) {
+            alert('Order information could not be found.');
+            return;
+        }
+
+        location.href =
+            'order-confirmation.html';
+    }
+);
+
+/* =====================================================
+   PLACE ORDER BUTTON
+===================================================== */
+
+const checkoutBtn =
+    document.getElementById(
+        'checkoutBtn'
+    );
+
+
+checkoutBtn.addEventListener(
+
+    'click',
+
+    async () => {
+
+        /* =================================================
+           GET CUSTOMER INFORMATION
+        ================================================= */
+
+        const firstName =
+            document
+                .getElementById('firstName')
+                .value
+                .trim();
+
+
+        const lastName =
+            document
+                .getElementById('lastName')
+                .value
+                .trim();
+
+
+        const address =
+            document
+                .getElementById('address')
+                .value
+                .trim();
+
+
+        const city =
+            document
+                .getElementById('city')
+                .value
+                .trim();
+
+
+        const province =
+            document
+                .getElementById('province')
+                .value
+                .trim();
+
+
+        const postalCode =
+            document
+                .getElementById('postalCode')
+                .value
+                .trim();
+
+
+        const phone =
+            document
+                .getElementById('phone')
+                .value
+                .trim();
+
+
+        /* =================================================
+           VALIDATE
+        ================================================= */
+
+        if (
+            !firstName ||
+            !lastName ||
+            !address ||
+            !city ||
+            !province ||
+            !postalCode ||
+            !phone
+        ) {
+
+            alert(
+                'Please fill in all required fields.'
+            );
+
+            return;
+
+        }
+
+
+        /* =================================================
+           PAYMENT
+        ================================================= */
+
+        const selectedPayment =
+            document.querySelector(
+                'input[name="payment"]:checked'
+            );
+
+
+        const selectedPaymentValue =
+            selectedPayment
+                ? selectedPayment.value
+                : 'cod';
+
+        const savedPaymentMethodId = selectedPaymentValue === 'saved'
+            ? Number(savedPaymentSelect.value)
+            : 0;
+
+        if(selectedPaymentValue === 'saved' && !savedPaymentMethodId){
+            alert('Choose a saved payment method or select another payment option.');
+            return;
+        }
+
+        const paymentMethod = selectedPaymentValue === 'saved'
+            ? 'saved'
+            : selectedPaymentValue;
+
+
+        /* =================================================
+           GET CHECKOUT ITEMS
+        ================================================= */
+
+        const items =
+            JSON.parse(
+                localStorage.getItem(
+                    'checkoutItems'
+                ) || '[]'
+            );
+
+
+        if (
+            !items ||
+            items.length === 0
+        ) {
+
+            alert(
+                'Your cart is empty.'
+            );
+
+            return;
+
+        }
+
+
+        /* =================================================
+           CALCULATE SUBTOTAL
+        ================================================= */
+
+        const subtotal =
+            items.reduce(
+                (sum, item) => {
+
+                    return sum +
+                        (
+                            Number(item.price) *
+                            Number(item.quantity || 0)
+                        );
+
+                },
+                0
+            );
+
+
+        /* =================================================
+           SHIPPING
+        ================================================= */
+
+        /*
+           Change this if your website
+           uses a different shipping fee.
+        */
+
+        const shippingFee = 50;
+
+
+        const totalAmount =
+            subtotal +
+            shippingFee;
+
+
+        /* =================================================
+           DISABLE BUTTON
+        ================================================= */
+
+        checkoutBtn.disabled =
+            true;
+
+        checkoutBtn.textContent =
+            'Placing Order...';
+
+
+        try {
+
+        /* =================================================
+        SEND ORDER TO DATABASE
+        ================================================= */
+const { data: { session }, error: sessionError } =
+    await supabase.auth.getSession();
+
+console.log('Checkout auth session exists:', !!session);
+console.log('Checkout auth user ID:', session?.user?.id);
+console.log('Checkout local user ID:', userId);
+console.log('Session error:', sessionError);
+        const orderData = {
+            user_id: userId,
+            payment_method: paymentMethod,
+            subtotal: subtotal,
+            shipping_fee: shippingFee,
+            total: totalAmount,
+            address_id: savedCheckoutAddresses.some(
+                address => String(address.address_id) === savedAddressSelect.value
+            ) ? Number(savedAddressSelect.value) : null,
+            notes: `Delivery to ${firstName} ${lastName}, ${address}, ${city}, ${province}, ${postalCode}. Phone: ${phone}. Saved payment method ID: ${savedPaymentMethodId || 'None'}.`
+        };
+
+
+
+        console.log(
+            "SENDING ORDER DATA:",
+            orderData
+        );
+
+
+// Create the order in Supabase.
+const { data: createdOrder, error: orderError } = await supabase
+    .from('orders')
+    .insert(orderData)
+    .select('id, order_number')
+    .single();
+
+if (orderError) throw orderError;
+
+// Save the real Supabase order ID.
+localStorage.setItem('lastOrderId', String(createdOrder.id));
+
+// Save order items.
+const orderItems = items.map(item => ({
+    order_id: createdOrder.id,
+    product_id: item.product_id ?? item.id ?? null,
+    product_name: item.name || item.product_name || 'Product',
+    unit_price: Number(item.price),
+    quantity: Number(item.quantity || 0),
+    line_total: Number(item.price) * Number(item.quantity || 0)
+}));
+
+const { error: itemsError } = await supabase
+    .from('order_items')
+    .insert(orderItems);
+
+if (itemsError) {
+    console.error('Order was created, but saving order items failed:', itemsError);
+    throw new Error('Your order was created, but its items could not be saved. Please contact support before placing another order.');
+}
+
+
+if (paymentMethod === 'gcash' || paymentMethod === 'card') {
+    const response = await fetch(
+    `${API_BASE}/create-checkout.php`,
+        {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                order_id: createdOrder.id,
+                user_id: userId,
+                payment_method: paymentMethod
+            })
+        }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success || !result.checkout_url) {
+        throw new Error(
+            result.error || 'Unable to start PayMongo checkout.'
+        );
+    }
+
+    // Keep the cart until payment has been handled.
+    window.location.href = result.checkout_url;
+    return;
+}
+
+// COD and other existing non-PayMongo options.
+localStorage.removeItem('checkoutItems');
+openSuccessModal();
+
+       
+        } catch (error) {
+            console.error('Order error:', error);
+
+            alert(
+                error?.message ||
+                'Unable to place your order. Please try again.'
+            );
+        } finally {
+            checkoutBtn.disabled = false;
+            checkoutBtn.textContent = 'Place Order';
+        }
+
+
+        checkoutBtn.disabled =
+            false;
+
+        checkoutBtn.textContent =
+            'Place Order';
+
+    }
+
+);
+
+
+/* =====================================================
+   INITIALIZE ORDER TOTAL
+===================================================== */
+
+updateOrderTotal();
+loadSavedCheckoutDetails();
+
+
+;
+
+
+  }
+}

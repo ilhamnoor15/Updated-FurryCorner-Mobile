@@ -1,0 +1,7 @@
+{
+  "name": "FurryCorner",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular-standalone"
+}
