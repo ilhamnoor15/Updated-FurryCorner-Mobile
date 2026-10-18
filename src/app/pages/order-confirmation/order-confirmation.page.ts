@@ -152,6 +152,38 @@ async function loadOrder() {
 
         if (profileError) throw profileError;
 
+        
+const orderItems = order.order_items || [];
+
+const productIds = [
+    ...new Set(
+        orderItems
+            .map(item => item.product_id)
+            .filter(id => id !== null && id !== undefined)
+    )
+];
+
+let productImages = {};
+
+if (productIds.length > 0) {
+    const { data: products, error: productsError } = await supabase
+        .from('products')
+        .select('id, image_url')
+        .in('id', productIds);
+
+    if (productsError) {
+        console.error('Could not load product images:', productsError);
+    } else {
+        productImages = Object.fromEntries(
+            (products || []).map(product => [
+                String(product.id),
+                product.image_url || ''
+            ])
+        );
+    }
+}
+
+
         renderOrder({
             order_id: order.order_number || order.id,
             status: order.status,
@@ -165,10 +197,13 @@ async function loadOrder() {
             subtotal: order.subtotal,
             shipping_fee: order.shipping_fee,
             total_amount: order.total,
-            items: (order.order_items || []).map(item => ({
+            
+            items: orderItems.map(item => ({
                 ...item,
+                image_url: productImages[String(item.product_id)] || '',
                 item_total: item.line_total
             }))
+
         });
     } catch (error) {
         console.error('Order loading error:', error);
@@ -234,11 +269,13 @@ function renderOrder(order) {
 
     const itemsHtml = items.map(item => `
         <div class="confirmation-item">
+            
             <img
-                src="images/product-${item.product_id}.png"
+                src="${item.image_url || 'images/placeholder.png'}"
                 alt="${item.product_name}"
-                onerror="this.style.display='none'"
+                onerror="this.onerror=null; this.src='images/placeholder.png';"
             >
+
             <div class="confirmation-item-info">
                 <div class="confirmation-item-name">
                     ${item.product_name}

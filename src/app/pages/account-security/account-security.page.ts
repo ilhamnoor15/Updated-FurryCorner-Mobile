@@ -88,6 +88,50 @@ accountForm.addEventListener('submit', async event => {
             throw new Error('Please complete all account fields.');
         }
 
+        
+let { data: authData, error: authError } =
+    await supabase.auth.getUser();
+
+if (authError || !authData.user?.email) {
+    // Try refreshing the existing session before asking the user
+    // to sign in again.
+    const { data: sessionData, error: sessionError } =
+        await supabase.auth.getSession();
+
+    if (!sessionError && sessionData.session) {
+        const { data: refreshedData, error: refreshError } =
+            await supabase.auth.refreshSession();
+
+        if (!refreshError && refreshedData.user?.email) {
+            authData = { user: refreshedData.user };
+            authError = null;
+        }
+    }
+}
+
+if (authError || !authData.user?.email) {
+    throw new Error(
+        'Your login session could not be verified. Please sign in again.'
+    );
+}
+
+
+// Require the current password before saving account changes.
+if (!currentPassword) {
+    throw new Error('Please enter your current password to save account details.');
+}
+
+const { error: verifyError } =
+    await supabase.auth.signInWithPassword({
+        email: authData.user.email,
+        password: currentPassword
+    });
+
+        if (verifyError) {
+            throw new Error('Your current password is incorrect. No account details were saved.');
+        }
+
+        // Only update the profile after password verification succeeds.
         const { error: profileError } = await supabase
             .from('profiles')
             .update({
@@ -98,9 +142,6 @@ accountForm.addEventListener('submit', async event => {
         if (profileError) {
             throw profileError;
         }
-
-        const { data: authData, error: authError } =
-            await supabase.auth.getUser();
 
         if (authError || !authData.user) {
             throw new Error('Unable to verify your signed-in account.');
@@ -149,12 +190,14 @@ accountForm.addEventListener('submit', async event => {
 
 
 
-passwordForm.addEventListener('submit', async event => {
-    event.preventDefault();
 
-    const button = document.getElementById('savePassword');
-    button.disabled = true;
-    setStatus(passwordStatus, 'Updating password...');
+const sendPasswordOtp = document.getElementById('sendPasswordOtp');
+const passwordOtpSection = document.getElementById('passwordOtpSection');
+const passwordOtpInput = document.getElementById('passwordOtp');
+
+sendPasswordOtp.addEventListener('click', async () => {
+    sendPasswordOtp.disabled = true;
+    setStatus(passwordStatus, 'Requesting email verification code...');
 
     try {
         const currentPassword =
@@ -165,54 +208,188 @@ passwordForm.addEventListener('submit', async event => {
             document.getElementById('confirmPassword').value;
 
         if (!currentPassword || !newPassword || !confirmPassword) {
-            throw new Error('Please complete all password fields.');
+            throw new Error('Please complete all password fields first.');
+        }
+
+        if (newPassword.length < 8 || newPassword.length > 72) {
+            throw new Error('Your new password must be 8 to 72 characters long.');
         }
 
         if (newPassword !== confirmPassword) {
             throw new Error('The new passwords do not match.');
         }
 
-        if (newPassword.length < 6) {
-            throw new Error('Your new password must be at least 6 characters.');
+        if (newPassword === currentPassword) {
+            throw new Error('Your new password must be different from your current password.');
         }
 
-        const { data: userData, error: userError } =
-            await supabase.auth.getUser();
+        const { data: sessionData, error: sessionError } =
+            await supabase.auth.getSession();
 
-        if (userError || !userData.user?.email) {
-            throw new Error('Unable to verify your signed-in account.');
+        if (sessionError || !sessionData.session?.access_token) {
+            throw new Error('Your session has expired. Please sign in again.');
         }
 
-        const { error: verifyError } = await supabase.auth.signInWithPassword({
-            email: userData.user.email,
-            password: currentPassword
-        });
+        const response = await fetch(
+            'https://furrycorner.online/furrycorner_api/password-otp-request.php',
+            {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${sessionData.session.access_token}`,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({})
+            }
+        );
 
-        if (verifyError) {
-            throw new Error('Your current password is incorrect.');
+        const result = await response.json();
+
+        if (!response.ok || result.success === false) {
+            throw new Error(
+                result.message || 'Unable to send the verification code.'
+            );
         }
 
-        const { error: updateError } = await supabase.auth.updateUser({
-            password: newPassword
-        });
+        passwordOtpSection.hidden = false;
+        passwordOtpInput.required = true;
+        passwordOtpInput.value = '';
+        passwordOtpInput.focus();
 
-        if (updateError) {
-            throw updateError;
-        }
+        sendPasswordOtp.textContent = 'Send OTP Again';
 
-        passwordForm.reset();
-        setStatus(passwordStatus, 'Password updated successfully.');
+        setStatus(
+            passwordStatus,
+            result.message || 'Verification code requested. Check your registered email.'
+        );
 
     } catch (error) {
         setStatus(
             passwordStatus,
-            error.message || 'Unable to update password.',
+            error.message || 'Unable to request the verification code.',
+            true
+        );
+    } finally {
+        sendPasswordOtp.disabled = false;
+    }
+});
+
+
+passwordForm.addEventListener('submit', async event => {
+    event.preventDefault();
+
+    const button = document.getElementById('savePassword');
+    button.disabled = true;
+
+    setStatus(passwordStatus, 'Verifying code and updating password...');
+
+    try {
+        const currentPassword =
+            document.getElementById('currentPassword').value;
+        const newPassword =
+            document.getElementById('newPassword').value;
+        const confirmPassword =
+            document.getElementById('confirmPassword').value;
+        const otp = passwordOtpInput.value.trim();
+
+        if (!currentPassword || !newPassword || !confirmPassword || !otp) {
+            throw new Error('Please complete all fields, including the verification code.');
+        }
+
+        if (!/^\d{6}$/.test(otp)) {
+            throw new Error('Please enter the complete six-digit verification code.');
+        }
+
+        if (newPassword.length < 8 || newPassword.length > 72) {
+            throw new Error('Your new password must be 8 to 72 characters long.');
+        }
+
+        if (newPassword !== confirmPassword) {
+            throw new Error('The new passwords do not match.');
+        }
+
+        if (newPassword === currentPassword) {
+            throw new Error('Your new password must be different from your current password.');
+        }
+
+        const { data: sessionData, error: sessionError } =
+            await supabase.auth.getSession();
+
+        if (sessionError || !sessionData.session?.access_token) {
+            throw new Error('Your session has expired. Please sign in again.');
+        }
+
+        const response = await fetch(
+            'https://furrycorner.online/furrycorner_api/password-change.php',
+            {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${sessionData.session.access_token}`,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    otp: otp,
+                    current_password: currentPassword,
+                    new_password: newPassword
+                })
+            }
+        );
+
+        const result = await response.json();
+
+        
+if (!response.ok || result.success !== true) {
+    throw new Error(
+        result.message || 'Unable to update your password.'
+    );
+}
+
+// The backend changed the password. Re-authenticate to refresh
+// the Supabase session using the new password.
+const signedInEmail = sessionData.session.user.email;
+
+const { data: refreshedSession, error: refreshError } =
+    await supabase.auth.signInWithPassword({
+        email: signedInEmail,
+        password: newPassword
+    });
+
+if (refreshError || !refreshedSession.session) {
+    passwordForm.reset();
+    passwordOtpSection.hidden = true;
+    passwordOtpInput.required = false;
+
+    setStatus(
+        passwordStatus,
+        'Your password was changed, but your session could not be refreshed. Please sign in again.',
+        true
+    );
+    return;
+}
+
+passwordForm.reset();
+passwordOtpSection.hidden = true;
+passwordOtpInput.required = false;
+sendPasswordOtp.textContent = 'Send OTP to Email';
+
+setStatus(
+    passwordStatus,
+    'Password updated successfully. You can continue using your account.'
+);
+
+
+    } catch (error) {
+        setStatus(
+            passwordStatus,
+            error.message || 'Unable to update your password.',
             true
         );
     } finally {
         button.disabled = false;
     }
 });
+
 
 
 loadAccount();

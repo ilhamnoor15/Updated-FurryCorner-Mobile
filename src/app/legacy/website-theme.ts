@@ -670,24 +670,58 @@ html body .navbar{
 }
 html body .navbar .logo{ margin:0; padding:0; display:flex; align-items:center; background:none; }
 html body .navbar .logo img{ width:42px; height:42px; object-fit:contain; display:block; }
-html body .cart-link{
-  position:relative;
-  flex:0 0 auto;
-  width:40px;
-  height:40px;
-  padding:0;
-  display:grid;
-  place-items:center;
-  color:var(--ink);
-  background:#fff;
-  border:1px solid rgba(31,42,68,.10);
-  border-radius:12px;
-  box-shadow:0 2px 8px rgba(31,42,68,.08);
-  cursor:pointer;
+
+html body .navbar .cart-link {
+  position: relative;
+  flex: 0 0 40px;
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid rgba(31,42,68,.10);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(31,42,68,.08);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
-html body .cart-link svg{ width:21px; height:21px; }
-html body .cart-link:active{ background:var(--blue-light); }
-html body .cart-link .cart-badge{ position:absolute; top:-6px; right:-6px; }
+
+html body .navbar .cart-link svg {
+  display: block;
+  width: 21px;
+  height: 21px;
+  flex: 0 0 21px;
+}
+
+html body .navbar .cart-link:active {
+  background: var(--blue-light);
+}
+
+
+html body .navbar .cart-link .cart-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--blue-dark);
+  color: #fff;
+  border: 2px solid #fff;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  box-sizing: border-box;
+}
+
+
 /* menu pages / sign in / checkout */
 html body .site-header .header-inner,
 html body .page-header .header-inner{

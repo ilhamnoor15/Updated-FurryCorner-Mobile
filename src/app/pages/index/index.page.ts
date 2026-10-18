@@ -2674,28 +2674,81 @@ const notificationStorageKey = notificationUserId
 
 let notifications = [];
 
-async function loadNotificationBadge(){
 
-    if(!window.FurryCornerAuth.isAuthenticated){
+async function loadNotificationBadge() {
+    const badge = document.getElementById('bottomNotifBadge');
+
+    if (!badge) return;
+
+    try {
+        const { data: { user }, error: authError } =
+            await supabase.auth.getUser();
+
+        if (authError) throw authError;
+
+        if (!user) {
+            notifications = [];
+            renderNotifications();
+            return;
+        }
+
+        const readKey = `furrycornerNotificationRead:${user.id}`;
+        let readState = {};
+
+        try {
+            readState = JSON.parse(localStorage.getItem(readKey) || '{}');
+        } catch {
+            readState = {};
+        }
+
+        const [savedResult, ordersResult, bookingsResult] =
+            await Promise.all([
+                supabase
+                    .from('notifications')
+                    .select('id, is_read')
+                    .eq('user_id', user.id),
+
+                supabase
+                    .from('orders')
+                    .select('id')
+                    .eq('user_id', user.id),
+
+                supabase
+                    .from('bookings')
+                    .select('id')
+                    .eq('user_id', user.id)
+            ]);
+
+        if (savedResult.error) throw savedResult.error;
+        if (ordersResult.error) throw ordersResult.error;
+        if (bookingsResult.error) throw bookingsResult.error;
+
+        notifications = [
+            ...(savedResult.data || []).map(item => ({
+                id: `db-${item.id}`,
+                read: item.is_read
+            })),
+
+            ...(ordersResult.data || []).map(order => ({
+                id: `order-${order.id}`,
+                read: readState[`order-${order.id}`] === true
+            })),
+
+            ...(bookingsResult.data || []).map(booking => ({
+                id: `booking-${booking.id}`,
+                read: readState[`booking-${booking.id}`] === true
+            }))
+        ];
+
+        renderNotifications();
+
+    } catch (error) {
+        console.error('Notification badge loading failed:', error);
         notifications = [];
         renderNotifications();
-        return;
     }
-
-    
-try {
-    // Old PHP notification API removed.
-    // Keep notifications empty until a working data source is connected.
-    notifications = [];
-    renderNotifications();
-} catch (error) {
-    console.error('Notification loading failed:', error);
-    notifications = [];
-    renderNotifications();
 }
 
-
-}
 
 
 const notifBadge =

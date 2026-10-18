@@ -13,7 +13,15 @@ export function installNativeHttp(): void {
 
   window.fetch = async (input: any, init: any = {}) => {
     const url: string = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-    if (!url.startsWith(API_BASE)) return browserFetch(input, init);
+    const AI_API_URL =
+  'https://furrycorner.online/FurryCorner_ESB/api/esb/gateway.php';
+
+const isExistingApi = url.startsWith(API_BASE);
+const isAiApi = url.startsWith(AI_API_URL);
+
+if (!isExistingApi && !isAiApi) {
+  return browserFetch(input, init);
+}
 
     const method = String(init.method || (input instanceof Request ? input.method : 'GET')).toUpperCase();
 

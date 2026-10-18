@@ -90,108 +90,275 @@ function validateSignupFields() {
   return null;
 }
 
+
+let otpRequested = false;
+let pendingSignup = null;
+
+const otpField = document.createElement('div');
+otpField.className = 'field';
+otpField.hidden = true;
+otpField.innerHTML = `
+  <label class="otp-label">Enter the verification code</label>
+  <p class="otp-hint">Enter the 6-digit code sent to your email.</p>
+  <div class="otp-boxes" role="group" aria-label="6-digit verification code">
+    ${Array.from({ length: 6 }, (_, i) =>
+      `<input class="otp-digit" type="text" inputmode="numeric"
+        pattern="[0-9]*" maxlength="1" aria-label="Digit ${i + 1}"
+        autocomplete="${i === 0 ? 'one-time-code' : 'off'}">`
+    ).join('')}
+  </div>
+`;
+
+const otpStyle = document.createElement('style');
+
+otpStyle.textContent = `
+  .otp-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 14px;
+    font-weight: 800;
+    text-align: left;
+    color: #1F2430;
+  }
+
+  .otp-hint {
+    margin-bottom: 12px;
+    font-size: 12px;
+    line-height: 1.4;
+    color: #929caf;
+    text-align: left;
+  }
+
+  .otp-boxes {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: clamp(5px, 2vw, 10px);
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .otp-boxes .otp-digit {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    height: clamp(42px, 12vw, 50px);
+    padding: 0;
+    border: 1.5px solid #dce2ea;
+    border-radius: 9px;
+    background: #fff;
+    color: #1F2430;
+    font-size: clamp(18px, 5vw, 22px);
+    font-weight: 800;
+    text-align: center;
+    outline: none;
+  }
+
+  .otp-boxes .otp-digit:focus {
+    border-color: #5CA3E8;
+    box-shadow: 0 0 0 2px rgba(92, 163, 232, .15);
+  }
+
+  @media (max-width: 360px) {
+    .otp-boxes { gap: 4px; }
+    .otp-boxes .otp-digit { border-radius: 7px; }
+  }
+`;
+
+document.head.appendChild(otpStyle);
+
+const otpDigits = Array.from(otpField.querySelectorAll('.otp-digit'));
+
+otpDigits.forEach((input, index) => {
+  input.addEventListener('input', () => {
+    input.value = input.value.replace(/\D/g, '').slice(-1);
+
+    if (input.value && index < otpDigits.length - 1) {
+      otpDigits[index + 1].focus();
+    }
+  });
+
+  input.addEventListener('keydown', event => {
+    if (event.key === 'Backspace' && !input.value && index > 0) {
+      otpDigits[index - 1].focus();
+    }
+  });
+
+  input.addEventListener('paste', event => {
+    event.preventDefault();
+    const pasted = event.clipboardData
+      .getData('text')
+      .replace(/\D/g, '')
+      .slice(0, 6);
+
+    pasted.split('').forEach((digit, i) => {
+      if (otpDigits[i]) otpDigits[i].value = digit;
+    });
+
+    otpDigits[Math.min(pasted.length, 5)].focus();
+  });
+});
+
+function getSignupOtp() {
+  return otpDigits.map(input => input.value).join('');
+}
+signupForm.insertBefore(otpField, submitBtn);
+
+const API_BASE = 'https://furrycorner.online/furrycorner_api';
+
+async function callOtpEndpoint(endpoint, payload) {
+  const response = await fetch(`${API_BASE}/${endpoint}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  const result = await response.json().catch(() => ({}));
+
+  if (!response.ok || !result.success) {
+    throw new Error(result.message || `Request failed (${response.status}).`);
+  }
+
+  return result;
+}
+
+function saveSignupSession(data, firstName, lastName, email) {
+  const user = data.user;
+  const name = `${firstName} ${lastName}`.trim();
+
+  const loggedInUser = {
+    id: user.id,
+    user_id: user.id,
+    firstName,
+    lastName,
+    email,
+    role: 'customer'
+  };
+
+  localStorage.setItem('loggedInUser', JSON.stringify(loggedInUser));
+  localStorage.setItem('loggedInUserId', user.id);
+  localStorage.setItem('loggedInName', name);
+  localStorage.setItem('loggedInEmail', email);
+  localStorage.setItem('furryCornerUser', JSON.stringify({ name, email }));
+  localStorage.setItem('profileName', name);
+  localStorage.setItem('furryCornerAccount', JSON.stringify({ name, email }));
+}
+
 signupForm.addEventListener('submit', async event => {
   event.preventDefault();
   resetFormError();
-  syncFullName();
 
-  const validationError = validateSignupFields();
-  if (validationError) {
-    showFormError(validationError);
+  if (!otpRequested) {
+    syncFullName();
+
+    const validationError = validateSignupFields();
+    if (validationError) {
+      showFormError(validationError);
+      return;
+    }
+
+    pendingSignup = {
+      firstName: document.getElementById('firstName').value.trim(),
+      lastName: document.getElementById('lastName').value.trim(),
+      email: document.getElementById('email').value.trim().toLowerCase(),
+      password: document.getElementById('password').value
+    };
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Sending verification code...';
+
+    try {
+      await callOtpEndpoint('signup-otp-request.php', {
+        email: pendingSignup.email
+      });
+
+      otpRequested = true;
+      otpField.hidden = false;
+
+      nameFields.hidden = true;
+      document.getElementById('email').disabled = true;
+      document.getElementById('password').closest('.field').hidden = true;
+      document.getElementById('confirm').closest('.field').hidden = true;
+
+      otpDigits[0].required = true;
+      submitBtn.textContent = 'Verify code and create account';
+
+      successMessage.textContent =
+        `A verification code was sent to ${pendingSignup.email}. It expires in 10 minutes.`;
+      successMessage.hidden = false;
+      otpDigits[0].focus();
+    } catch (error) {
+      showFormError(error.message || 'Could not send the verification code.');
+    } finally {
+      submitBtn.disabled = false;
+    }
+
+    return;
+  }
+
+  const otp = getSignupOtp();
+
+  if (!/^\d{6}$/.test(otp)) {
+    showFormError('Enter the 6-digit verification code from your email.');
     return;
   }
 
   submitBtn.disabled = true;
-    submitBtn.textContent = 'Creating account...';
+  submitBtn.textContent = 'Verifying...';
 
-    const firstName = document.getElementById('firstName').value.trim();
-    const lastName = document.getElementById('lastName').value.trim();
-    const email = document.getElementById('email').value.trim().toLowerCase();
-    const password = document.getElementById('password').value;
+  try {
+    await callOtpEndpoint('signup-verify.php', {
+      email: pendingSignup.email,
+      otp,
+      password: pendingSignup.password,
+      first_name: pendingSignup.firstName,
+      last_name: pendingSignup.lastName
+    });
 
-try {
-  const name = `${firstName} ${lastName}`.trim();
-  const normalizedEmail = email.trim().toLowerCase();
+    // The PHP endpoint creates the account only after validating the OTP.
+    // Now sign in through Supabase to obtain the normal customer session.
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: pendingSignup.email,
+      password: pendingSignup.password
+    });
 
-  const { data, error } = await supabase.auth.signUp({
-    email: normalizedEmail,
-    password,
-    options: {
-      data: {
-        first_name: firstName.trim(),
-        last_name: lastName.trim(),
-        full_name: name,
-        role: 'customer'
-      }
+    if (error) {
+      throw new Error(
+        'Your email is verified and your account was created, but automatic sign-in failed. Please sign in using your new account.'
+      );
     }
-  });
-  console.log('Signup result:', {
-    userId: data.user?.id,
-    hasSession: !!data.session,
-    emailConfirmedAt: data.user?.email_confirmed_at,
-    error: error?.message
-});
-  if (error) {
-    showFormError(error.message);
-    return;
-  }
 
-  if (!data.user) {
-    showFormError('Unable to create account. Please try again.');
-    return;
-  }
+    if (!data.user || !data.session) {
+      throw new Error('Account created, but no sign-in session was returned. Please sign in.');
+    }
 
-  // Save legacy-compatible user details only when signed in.
-  if (data.session) {
-    const loggedInUser = {
-      id: data.user.id,
-      user_id: data.user.id,
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      email: normalizedEmail,
-      role: 'customer'
-    };
-
-    localStorage.setItem('loggedInUser', JSON.stringify(loggedInUser));
-    localStorage.setItem('loggedInUserId', data.user.id);
-    localStorage.setItem('loggedInName', name);
-    localStorage.setItem('loggedInEmail', normalizedEmail);
-    localStorage.setItem(
-      'furryCornerUser',
-      JSON.stringify({ name, email: normalizedEmail })
+    saveSignupSession(
+      data,
+      pendingSignup.firstName,
+      pendingSignup.lastName,
+      pendingSignup.email
     );
-    localStorage.setItem('profileName', name);
-    localStorage.setItem(
-      'furryCornerAccount',
-      JSON.stringify({ name, email: normalizedEmail })
-    );
-  }
 
-  signupForm.hidden = true;
-  document.getElementById('signinRow').hidden = true;
-  
-successMessage.hidden = true;
+    signupForm.hidden = true;
+    document.getElementById('signinRow').hidden = true;
+    successMessage.textContent = 'Email verified! Your account was created successfully.';
+    successMessage.hidden = false;
 
-// Redirect to the home page after successful signup
-location.href = 'index';  
-
-} catch (error) {
-  console.error('Registration request failed:', error);
-  showFormError(
-    error instanceof Error
-      ? error.message
-      : 'Unable to create account. Please try again.'
-  );
-}
-    finally {
+    location.href = 'index';
+  } catch (error) {
+    showFormError(error.message || 'Verification failed. Please try again.');
+  } finally {
+    submitBtn.disabled = false;
     if (!signupForm.hidden) {
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Create account';
+      submitBtn.textContent = otpRequested
+        ? 'Verify code and create account'
+        : 'Create account';
     }
-    }
+  }
 });
 
-;
+
+    ;
 
 
   }

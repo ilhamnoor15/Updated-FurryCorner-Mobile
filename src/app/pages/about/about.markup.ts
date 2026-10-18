@@ -31,13 +31,41 @@ export const HTML = `<header class="site-header">
     </section>
 
     <section class="section" id="developers">
-        <div class="section-heading"><span class="section-number">02</span><h2>Developers</h2></div>
-        <div class="developer-grid">
-            <article class="developer-card"><div class="photo-placeholder"><div class="photo-placeholder-inner"><span class="photo-frame" aria-hidden="true">+</span><span>Photo placeholder</span></div></div><div class="developer-info"><h3>[Name 1]</h3><p>[Role]</p></div></article>
-            <article class="developer-card"><div class="photo-placeholder"><div class="photo-placeholder-inner"><span class="photo-frame" aria-hidden="true">+</span><span>Photo placeholder</span></div></div><div class="developer-info"><h3>[Name 2]</h3><p>[Role]</p></div></article>
-            <article class="developer-card"><div class="photo-placeholder"><div class="photo-placeholder-inner"><span class="photo-frame" aria-hidden="true">+</span><span>Photo placeholder</span></div></div><div class="developer-info"><h3>[Name 3]</h3><p>[Role]</p></div></article>
-            <article class="developer-card"><div class="photo-placeholder"><div class="photo-placeholder-inner"><span class="photo-frame" aria-hidden="true">+</span><span>Photo placeholder</span></div></div><div class="developer-info"><h3>[Name 4]</h3><p>[Role]</p></div></article>
-        </div>
+                        <div class="section-heading"><span class="section-number">02</span><h2>Developers</h2></div>
+                        <div class="developer-grid">
+                            <article class="developer-card">
+                    <img class="developer-photo" src="images/developer1.jpg" alt="Developer 1">
+                    <div class="developer-info">
+                        <h3>Oira, Jhamylle Rhon</h3>
+                        <p>Team Leader</p>
+                    </div>
+                </article>
+
+                <article class="developer-card">
+                    <img class="developer-photo" src="images/developer2.jpg" alt="Developer 2">
+                    <div class="developer-info">
+                        <h3>Buenavista, Jocielle</h3>
+                        <p>Team Member</p>
+                    </div>
+                </article>
+
+                <article class="developer-card">
+                    <img class="developer-photo" src="images/developer3.jpg" alt="Developer 3">
+                    <div class="developer-info">
+                        <h3>Noor, Ilham</h3>
+                        <p>Team Member</p>
+                    </div>
+                </article>
+
+                <article class="developer-card">
+                    <img class="developer-photo" src="images/developer4.jpg" alt="Developer 4">
+                    <div class="developer-info">
+                        <h3>Team Member</h3>
+                        <p>Torrevillas, Gilbert Meco Mari </p>
+                    </div>
+                </article>
+
+                        </div>
     </section>
 
     <section class="section" id="app">
@@ -58,10 +86,8 @@ export const HTML = `<header class="site-header">
         <div class="section-heading"><span class="section-number">04</span><h2>Contact Us</h2></div>
         <div class="contact-layout">
             <div class="contact-details">
-                <div class="contact-item"><h3>Email</h3><p>[Email address]</p></div>
-                <div class="contact-item"><h3>Phone</h3><p>[Phone number]</p></div>
-                <div class="contact-item"><h3>Address</h3><p>[Business address]</p></div>
-                <div class="contact-item"><h3>Social</h3><div class="social-links"><a href="#contact">[Facebook]</a><a href="#contact">[Instagram]</a><a href="#contact">[TikTok]</a></div></div>
+                <div class="contact-item"><h3>Email</h3><p>furrycorner@gmail.com</p></div>
+                <div class="contact-item"><h3>Phone</h3><p>09661657441</p></div>
             </div>
             <form class="contact-form" id="contactForm">
                 <div class="form-field"><label for="contactName">Name</label><input id="contactName" name="name" autocomplete="name" required></div>
@@ -117,8 +143,52 @@ h1,h2,h3,.brand{font-family:'Baloo 2',cursive}
 .history-year{font:800 42px 'Baloo 2',cursive;color:var(--blue-dark);line-height:1}
 .history-copy{max-width:690px;display:grid;gap:12px;color:#515866}
 
-.developer-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
-.developer-card{overflow:hidden;background:var(--white);border:1px solid var(--border);border-radius:8px}
+
+.developer-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    align-items: start;
+}
+
+.developer-card {
+    min-width: 0;
+    overflow: hidden;
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 3px 10px rgba(31, 36, 48, 0.06);
+}
+
+.developer-photo {
+    display: block;
+    width: 100%;
+    height: 220px;
+    object-fit: contain;
+    object-position: center;
+    background: #fce3c0;
+}
+
+.developer-info {
+    min-width: 0;
+    padding: 10px 12px 12px;
+}
+
+.developer-info h3 {
+    font-family: 'Nunito', sans-serif;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.developer-info p {
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.4;
+}
+
 .photo-placeholder{min-height:142px;display:grid;place-items:center;background:var(--cream);color:#6a7581;font-size:12px;font-weight:800;text-transform:uppercase}
 .photo-frame{width:48px;height:48px;border:2px solid #b0cbe2;border-radius:50%;display:grid;place-items:center;margin-bottom:7px;color:var(--blue-dark);font-size:20px}
 .photo-placeholder-inner{display:grid;justify-items:center}
@@ -150,10 +220,26 @@ h1,h2,h3,.brand{font-family:'Baloo 2',cursive}
 
 footer{padding:22px 16px 30px;text-align:center;color:var(--muted);font-size:13px}
 
-@media(max-width:760px){
-    .developer-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-    .app-layout,.contact-layout{grid-template-columns:1fr;gap:20px}
-    .app-copy{max-width:620px}
+
+@media(max-width:760px) {
+    .developer-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .developer-photo {
+        height: 125px;
+    }
+
+    .app-layout,
+    .contact-layout {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .app-copy {
+        max-width: 620px;
+    }
 }
 
 @media(max-width:520px){
@@ -168,9 +254,26 @@ footer{padding:22px 16px 30px;text-align:center;color:var(--muted);font-size:13p
     .section h2{font-size:25px}
     .history-layout{grid-template-columns:1fr;gap:12px}
     .history-year{font-size:34px}
-    .developer-grid{gap:10px}
     .photo-placeholder{min-height:118px}
-    .developer-info{padding:11px}
     .feature-list{grid-template-columns:1fr;gap:10px}
+    .developer-grid {
+    gap: 10px;
+}
+
+.developer-photo {
+    height: 110px;
+}
+
+.developer-info {
+    padding: 9px;
+}
+
+.developer-info h3 {
+    font-size: 12px;
+}
+
+.developer-info p {
+    font-size: 11px;
+}
 }
 `;

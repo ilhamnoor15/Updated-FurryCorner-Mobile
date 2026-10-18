@@ -18,18 +18,64 @@ export const HTML = `<header class="page-header"><div class="header-inner"><h1 c
             <p class="status" id="accountStatus" role="status" aria-live="polite"></p>
         </form>
     </section>
-    <section class="account-section" aria-labelledby="passwordTitle">
-        <h2 id="passwordTitle">Change password</h2>
-        <form class="account-form" id="passwordForm">
-            <div class="field"><label for="currentPassword">Current password</label><input id="currentPassword" type="password" autocomplete="current-password" required></div>
-            <div class="field-grid">
-                <div class="field"><label for="newPassword">New password</label><input id="newPassword" type="password" minlength="8" autocomplete="new-password" required></div>
-                <div class="field"><label for="confirmPassword">Confirm new password</label><input id="confirmPassword" type="password" minlength="8" autocomplete="new-password" required></div>
+   
+<section class="account-section" aria-labelledby="passwordTitle">
+    <h2 id="passwordTitle">Change password</h2>
+    <p>We'll send a verification code to your registered email.</p>
+
+    <form class="account-form" id="passwordForm">
+        <div class="field">
+            <label for="currentPassword">Current password</label>
+            <input id="currentPassword" type="password"
+                   autocomplete="current-password" required>
+        </div>
+
+        <div class="field-grid">
+            <div class="field">
+                <label for="newPassword">New password</label>
+                <input id="newPassword" type="password"
+                       minlength="8" maxlength="72"
+                       autocomplete="new-password" required>
             </div>
-            <button class="button" id="savePassword" type="submit">Update password</button>
-            <p class="status" id="passwordStatus" role="status" aria-live="polite"></p>
-        </form>
-    </section>
+
+            <div class="field">
+                <label for="confirmPassword">Confirm new password</label>
+                <input id="confirmPassword" type="password"
+                       minlength="8" maxlength="72"
+                       autocomplete="new-password" required>
+            </div>
+        </div>
+
+        <button class="button" id="sendPasswordOtp" type="button">
+            Send OTP to Email
+        </button>
+
+        <div id="passwordOtpSection" hidden>
+            <div class="field">
+                <label for="passwordOtp">Email verification code</label>
+                <input
+                    id="passwordOtp"
+                    class="otp-input"
+                    type="text"
+                    inputmode="numeric"
+                    autocomplete="one-time-code"
+                    maxlength="6"
+                    pattern="[0-9]{6}"
+                    placeholder="• • • • • •"
+                    aria-label="Six-digit email verification code"
+                >
+            </div>
+
+            <button class="button" id="savePassword" type="submit">
+                Verify OTP &amp; Update Password
+            </button>
+        </div>
+
+        <p class="status" id="passwordStatus"
+           role="status" aria-live="polite"></p>
+    </form>
+</section>
+
 </main>`;
 
 export const CSS = `
@@ -55,6 +101,55 @@ main{max-width:760px;margin:26px auto;padding:0 20px;display:grid;gap:20px}
 .button:disabled{opacity:.6;cursor:wait}
 .status{min-height:20px;color:#39784c;font-size:13px;font-weight:800}
 .status.error{color:var(--danger)}
+
+/* Password change email OTP */
+#passwordOtpSection {
+    margin-top: 20px;
+}
+
+#passwordOtpSection .field {
+    margin-bottom: 24px;
+}
+
+#passwordOtp.otp-input {
+    width: 100%;
+    max-width: 320px;
+    box-sizing: border-box;
+    padding: 16px 18px;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    background: #ffffff;
+    color: #1f2937;
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: 10px;
+    text-align: center;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+#passwordOtp.otp-input:focus {
+    border-color: #7c3aed;
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+}
+
+#passwordOtpSection #savePassword {
+    margin-top: 8px;
+}
+
+#passwordOtpSection #savePassword:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+@media (max-width: 380px) {
+    #passwordOtp.otp-input {
+        max-width: 100%;
+        font-size: 21px;
+        letter-spacing: 7px;
+    }
+}
+
 @media(max-width:560px){.header-inner{padding:9px 14px}.page-title{font-size:19px}main{margin-top:17px;padding:0 14px}.account-section{padding:17px}}
 @media(max-width:380px){.field-grid{grid-template-columns:1fr}}
 `;

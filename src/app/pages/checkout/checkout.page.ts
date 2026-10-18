@@ -97,86 +97,48 @@ let savedCheckoutAddresses = [];
 let savedPaymentMethods = [];
 
 
+
 paymentOptions.forEach(option => {
-
-    option.addEventListener(
-        'click',
-        () => {
-
-
-            /* Remove active from all */
-
-            paymentOptions.forEach(opt => {
-
-                opt.classList.remove(
-                    'active'
-                );
-
-            });
-
-
-            /* Activate selected */
-
-            option.classList.add(
-                'active'
-            );
-
-
-            /* Hide all payment details */
-
-            Object.values(
-                paymentDetails
-            ).forEach(detail => {
-
-                if(detail){
-
-                    detail.classList.remove(
-                        'active'
-                    );
-
-                }
-
-            });
-
-
-            /* Get selected payment */
-
-            const paymentType =
-                option.dataset.payment;
-
-
-            /* Show selected details */
-
-            if(
-                paymentDetails[paymentType]
-            ){
-
-                paymentDetails[
-                    paymentType
-                ].classList.add(
-                    'active'
-                );
-
-            }
-
-
-            /* Check radio */
-
-            const radio =
-                option.querySelector(
-                    'input[type="radio"]'
-                );
-
-            if(radio){
-
-                radio.checked = true;
-
-            }
-
+    option.addEventListener('click', (event) => {
+        // Ignore clicks on a hidden payment option.
+        if (option.hidden || option.closest('[hidden]')) {
+            event.preventDefault();
+            return;
         }
-    );
 
+        const radio = option.querySelector('input[type="radio"]');
+
+        if (!radio || radio.disabled) return;
+
+        // Explicitly select this payment method.
+        radio.checked = true;
+
+        // Update the selected option's appearance.
+        paymentOptions.forEach(opt => {
+            opt.classList.remove('active');
+        });
+        option.classList.add('active');
+
+        // Hide all payment details.
+        Object.values(paymentDetails).forEach(detail => {
+            if (detail) detail.classList.remove('active');
+        });
+
+        // Show details for the selected payment method.
+        const paymentType = radio.value;
+        const details = paymentDetails[paymentType];
+
+        if (details) {
+            details.classList.add('active');
+        }
+
+        console.log(
+            '[Checkout Debug] Payment option clicked:',
+            radio.value
+        );
+    });
 });
+
 
 
 function applySavedAddress(address){
@@ -387,30 +349,12 @@ function closeSuccessModal(){
 }
 
 
-continueShoppingBtn.addEventListener(
 
-    'click',
+continueShoppingBtn.addEventListener('click', () => {
+    closeSuccessModal();
+    location.href = 'index.html';
+});
 
-    () => {
-
-        /* Clear cart after successful order */
-
-        localStorage.removeItem('cart');
-
-
-        /* Close modal before redirect */
-
-        closeSuccessModal();
-
-
-        /* Return to home page */
-
-        location.href =
-            'index.html';
-
-    }
-
-);
 
 
 /* =====================================================
@@ -534,6 +478,8 @@ checkoutBtn.addEventListener(
             document.querySelector(
                 'input[name="payment"]:checked'
             );
+        
+            console.log('[Checkout Debug] Selected payment:', selectedPayment?.value);
 
 
         const selectedPaymentValue =
@@ -692,21 +638,101 @@ if (itemsError) {
 }
 
 
-if (paymentMethod === 'gcash' || paymentMethod === 'card') {
-    const response = await fetch(
-    `${API_BASE}/create-checkout.php`,
-        {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                order_id: createdOrder.id,
-                user_id: userId,
-                payment_method: paymentMethod
-            })
+try {
+    const { data: { user: authUser } } =
+        await supabase.auth.getUser();
+console.log(
+    'SIGNED-IN USER ID:',
+    authUser?.id
+);
+
+console.log(
+    'SIGNED-IN EMAIL:',
+    authUser?.email
+);
+
+console.log(
+    'EMAILJS RECIPIENT:',
+    authUser?.email
+);
+    if (authUser?.email) {
+        const emailItems = items.map(item =>
+            `${item.name || item.product_name || 'Product'} x ${Number(item.quantity || 0)} — ₱${(Number(item.price) * Number(item.quantity || 0)).toFixed(2)}`
+        ).join('\n');
+
+        const emailResponse = await fetch(
+            'https://api.emailjs.com/api/v1.0/email/send',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    service_id: 'service_ai9gzjz',
+                    template_id: 'template_c2zl8s2',
+                    user_id: '7UAkyBiNuMO3Hhj37',
+                    template_params: {
+                        email: authUser.email,
+                        to_name: `${firstName} ${lastName}`,
+                        status_message: 'We have received your order and are processing it.',
+                        order_id: createdOrder.order_number || createdOrder.id,
+                        order_status: 'Pending',
+                        payment_method: paymentMethod,
+                        total_amount: Number(totalAmount).toFixed(2),
+                        items_list: emailItems
+                    }
+                })
+            }
+        );
+
+        if (!emailResponse.ok) {
+            console.error(
+                'Order confirmation email could not be sent:',
+                await emailResponse.text()
+            );
+        } else {
+            console.log('Order confirmation email sent.');
         }
+    }
+} catch (emailError) {
+    // Email failure must not prevent the order from continuing.
+    console.error('Order confirmation email error:', emailError);
+}
+
+
+if (
+    paymentMethod === 'gcash' ||
+    paymentMethod === 'card' ||
+    paymentMethod === 'saved'
+) {
+    
+const { data: { user: authUser }, error: authError } =
+    await supabase.auth.getUser();
+
+if (authError || !authUser?.email) {
+    throw new Error(
+        'Unable to find your account email. Please sign in again.'
     );
+}
+
+const response = await fetch(
+    `${API_BASE}/create-checkout.php`,
+    {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            order_id: createdOrder.id,
+            user_id: userId,
+            payment_method: paymentMethod,
+            customer_email: authUser.email,
+            customer_name: `${firstName} ${lastName}`,
+            customer_phone: phone
+        })
+    }
+);
+
 
     const result = await response.json();
 
@@ -721,8 +747,33 @@ if (paymentMethod === 'gcash' || paymentMethod === 'card') {
     return;
 }
 
-// COD and other existing non-PayMongo options.
+
+/* Remove only the items included in this order.
+   Preserve all other items in the cart. */
+
+function getProductKey(item) {
+    return String(item.product_id ?? item.id ?? item.productId ?? '');
+}
+
+function getCartItemKey(item) {
+    return `${getProductKey(item)}-${item.variant_id ?? item.variantId ?? ''}`;
+}
+
+const purchasedKeys = new Set(items.map(getCartItemKey));
+
+const cartItems = JSON.parse(
+    localStorage.getItem('cart') || '[]'
+);
+
+const remainingCartItems = cartItems.filter(
+    cartItem => !purchasedKeys.has(getCartItemKey(cartItem))
+);
+
+localStorage.setItem('cart', JSON.stringify(remainingCartItems));
+
+// Clear the checkout selection after the order is saved.
 localStorage.removeItem('checkoutItems');
+
 openSuccessModal();
 
        

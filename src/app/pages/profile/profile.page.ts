@@ -594,28 +594,72 @@ if (profileTitle) {
    START
 ===================================================== */
 
-async function updateProfileNotificationBadge(){
 
+async function updateProfileNotificationBadge() {
     const badge = document.getElementById('bottomNotifBadge');
 
-    if(!badge || !window.FurryCornerAuth.isAuthenticated){
-        if(badge)
+    if (!badge) return;
+
+    try {
+        const { data: { user }, error: authError } =
+            await supabase.auth.getUser();
+
+        if (authError) throw authError;
+
+        if (!user) {
             badge.style.display = 'none';
-        return;
+            return;
+        }
+
+        const readKey = `furrycornerNotificationRead:${user.id}`;
+        let readState = {};
+
+        try {
+            readState = JSON.parse(localStorage.getItem(readKey) || '{}');
+        } catch {
+            readState = {};
+        }
+
+        const [savedResult, ordersResult, bookingsResult] =
+            await Promise.all([
+                supabase
+                    .from('notifications')
+                    .select('id, is_read')
+                    .eq('user_id', user.id),
+
+                supabase
+                    .from('orders')
+                    .select('id')
+                    .eq('user_id', user.id),
+
+                supabase
+                    .from('bookings')
+                    .select('id')
+                    .eq('user_id', user.id)
+            ]);
+
+        if (savedResult.error) throw savedResult.error;
+        if (ordersResult.error) throw ordersResult.error;
+        if (bookingsResult.error) throw bookingsResult.error;
+
+        const unreadCount =
+            (savedResult.data || []).filter(item => !item.is_read).length +
+            (ordersResult.data || []).filter(
+                order => readState[`order-${order.id}`] !== true
+            ).length +
+            (bookingsResult.data || []).filter(
+                booking => readState[`booking-${booking.id}`] !== true
+            ).length;
+
+        badge.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
+        badge.style.display = unreadCount > 0 ? 'flex' : 'none';
+
+    } catch (error) {
+        console.error('Profile notification badge update failed:', error);
+        badge.style.display = 'none';
     }
-
-
-try {
-    // Old PHP notification API removed.
-    // Hide the badge until a working notification source is connected.
-    badge.style.display = 'none';
-} catch (error) {
-    console.error('Profile notification badge update failed:', error);
-    badge.style.display = 'none';
 }
 
-
-}
 
 updateProfileNotificationBadge();
 loadProfile();

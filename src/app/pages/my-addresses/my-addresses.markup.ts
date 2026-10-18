@@ -9,6 +9,18 @@ export const HTML = `<header class="page-header"><div class="header-inner"><h1 c
         <h2 class="section-title" id="address-form-title">Add an address</h2>
         <form class="address-form" id="addressForm">
             <input type="hidden" id="addressId">
+
+            <div class="map-picker" id="mapPicker">
+                <label for="mapSearch">Find your location on the map (optional)</label>
+                <div class="map-search-wrap">
+                    <input id="mapSearch" type="search" autocomplete="off" maxlength="200" placeholder="Search a place or address" disabled>
+                    <div class="map-suggestions" id="mapSuggestions" role="listbox" hidden></div>
+                </div>
+                <div class="map-canvas" id="mapCanvas" aria-label="Map for choosing your address"></div>
+                <div class="map-actions"><button class="button secondary" id="useMyLocation" type="button" disabled>Use my current location</button></div>
+                <p class="map-coords" id="mapCoords">No map location selected.</p>
+                <p class="status" id="mapStatus" role="status" aria-live="polite">Loading map...</p>
+            </div>
             <div class="field"><label for="addressLabel">Address name</label><input id="addressLabel" maxlength="50" placeholder="Home, Work, or another name" required></div>
             <div class="field-grid">
                 <div class="field"><label for="firstName">First name</label><input id="firstName" maxlength="50" required></div>
@@ -27,11 +39,18 @@ export const HTML = `<header class="page-header"><div class="header-inner"><h1 c
                 </select>
             </div>
 
+            <div class="field">
+                <label for="province">Province</label>
+                <select id="province" required disabled>
+                    <option value="">Select province</option>
+                </select>
+            </div>
+
             <div class="field-grid">
                 <div class="field">
                     <label for="city">City / Municipality</label>
-                    <select id="city" required>
-                        <option value="">Select city</option>
+                    <select id="city" required disabled>
+                        <option value="">Select city / municipality</option>
                     </select>
                 </div>
                 <div class="field">
@@ -41,6 +60,7 @@ export const HTML = `<header class="page-header"><div class="header-inner"><h1 c
                     </select>
                 </div>
             </div>
+            <p class="psgc-note">Address list source: Philippine Statistics Authority (PSA), Philippine Standard Geographic Code (PSGC), as of 30 September 2026.</p>
 
             <div class="field-grid">
                 <div class="field"><label for="postalCode">Postal code</label><input id="postalCode" maxlength="20" required></div>
@@ -112,7 +132,23 @@ main{max-width:900px;margin:28px auto;padding:0 20px;display:grid;grid-template-
 .address-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 .address-actions button{border:0;background:none;padding:2px 0;color:var(--blue-dark);font:800 13px 'Nunito',sans-serif;cursor:pointer}
 .address-actions button.delete{color:var(--danger)}
+.map-picker{display:grid;gap:8px}
+.map-picker>label{font-size:12px;font-weight:800;color:#626b79}
+.map-search-wrap{position:relative}
+.map-search-wrap input{width:100%;height:42px;padding:0 11px;border:1px solid var(--border);border-radius:8px;background:#fff;font:600 14px 'Nunito',sans-serif;color:var(--ink)}
+.map-search-wrap input:focus{outline:2px solid rgba(92,163,232,.25);border-color:var(--blue-dark)}
+.map-search-wrap input:disabled{background:#f3f4f6}
+.map-suggestions{position:absolute;z-index:20;left:0;right:0;top:46px;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 20px rgba(0,0,0,.12);max-height:240px;overflow:auto}
+.map-suggestions[hidden]{display:none}
+.map-suggestions button{display:block;width:100%;min-height:42px;padding:9px 12px;border:0;border-bottom:1px solid var(--border);background:#fff;text-align:left;font:600 13px 'Nunito',sans-serif;color:var(--ink);cursor:pointer}
+.map-suggestions button:last-child{border-bottom:0}
+.map-suggestions button:hover,.map-suggestions button:focus{background:var(--cream-light)}
+.map-suggestions .map-suggestions-empty{padding:10px 12px;font-size:13px;color:#687180}
+.map-canvas{width:100%;height:280px;border:1px solid var(--border);border-radius:10px;background:#e9edf3}
+.map-canvas[hidden]{display:none}
+.map-coords{font-size:12px;color:#596170}
+.psgc-note{font-size:11px;font-weight:600;color:#8b929e;line-height:1.4}
 .empty-state{padding:16px;background:rgba(255,255,255,.65);border-radius:10px;color:#687180;font-size:14px}
-@media(max-width:700px){main{grid-template-columns:1fr;margin-top:18px;padding:0 14px;gap:22px}.header-inner{padding:9px 14px}.address-form{padding:16px}}
+@media(max-width:700px){main{grid-template-columns:1fr;margin-top:18px;padding:0 14px;gap:22px}.header-inner{padding:9px 14px}.address-form{padding:16px}.map-canvas{height:240px}}
 @media(max-width:380px){.field-grid{grid-template-columns:1fr}.page-title{font-size:19px}.form-actions{flex-wrap:wrap}}
 `;

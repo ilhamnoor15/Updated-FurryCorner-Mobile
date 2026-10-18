@@ -886,9 +886,12 @@ function renderCartDrawer(){
                         ${isChecked ? 'checked' : ''}>
 
 
-                    <img
-                        src="images/product-${item.id}.png"
-                        alt="${item.name}">
+                    
+<img
+    src="${item.image_url || item.image || item.imageUrl || item.product_image || `images/product-${item.id}.png`}"
+    alt="${item.name}"
+    onerror="this.onerror=null; this.src='images/product-${item.id}.png';">
+
 
 
                     <div class="drawer-item-info">
@@ -1039,6 +1042,7 @@ function persistNotificationReadState() {
 }
 
 
+
 async function loadNotifications() {
     try {
         const {
@@ -1054,42 +1058,199 @@ async function loadNotifications() {
             return;
         }
 
-        const { data, error } = await supabase
-            .from('notifications')
-            .select(`
-                id,
-                title,
-                message,
-                notification_type,
-                is_read,
-                related_order_id,
-                created_at
-            `)
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false });
+        const storageKey =
+            `furrycornerNotificationRead:${user.id}`;
 
-        if (error) throw error;
+        let savedReadState = {};
 
-        notifications = (data || []).map(item => ({
-            id: String(item.id),
-            title: item.title,
-            message: item.message || '',
-            type: item.notification_type === 'payment'
-                ? 'payment'
-                : 'booking',
-            category: item.notification_type || 'Order',
-            time: new Date(item.created_at).toLocaleString(
-                'en-PH',
-                {
-                    dateStyle: 'medium',
-                    timeStyle: 'short'
-                }
-            ),
-            read: item.is_read,
-            relatedOrderId: item.related_order_id
-        }));
+        try {
+            savedReadState = JSON.parse(
+                localStorage.getItem(storageKey) || '{}'
+            );
+        } catch {
+            savedReadState = {};
+        }
+
+        // Fetch saved notifications, orders, and bookings together.
+        const [
+            notificationResult,
+            orderResult,
+            bookingResult
+        ] = await Promise.all([
+            supabase
+                .from('notifications')
+                .select(`
+                    id,
+                    title,
+                    message,
+                    notification_type,
+                    is_read,
+                    related_order_id,
+                    created_at
+                `)
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false }),
+
+            supabase
+                .from('orders')
+                .select(`
+                    id,
+                    order_number,
+                    status,
+                    payment_status,
+                    payment_method,
+                    created_at
+                `)
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false }),
+
+            supabase
+                .from('bookings')
+                .select(`
+                    id,
+                    pet_name,
+                    booking_date,
+                    booking_time,
+                    status,
+                    price,
+                    created_at
+                `)
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false })
+        ]);
+
+        if (notificationResult.error) {
+            throw notificationResult.error;
+        }
+
+        if (orderResult.error) {
+            throw orderResult.error;
+        }
+
+        if (bookingResult.error) {
+            throw bookingResult.error;
+        }
+
+        const savedNotifications =
+            (notificationResult.data || []).map(item => {
+                const type = String(
+                    item.notification_type || ''
+                ).toLowerCase();
+
+                return {
+                    id: `db-${item.id}`,
+                    title: item.title,
+                    message: item.message || '',
+                    type: type === 'payment' ? 'payment' : 'booking',
+                    category: type.includes('order')
+                        ? 'Order'
+                        : type === 'payment'
+                            ? 'Payment'
+                            : type === 'booking'
+                                ? 'Booking'
+                                : 'Notification',
+                    time: new Date(item.created_at).toLocaleString(
+                        'en-PH',
+                        {
+                            dateStyle: 'medium',
+                            timeStyle: 'short'
+                        }
+                    ),
+                    createdAt: item.created_at,
+                    read: item.is_read,
+                    source: 'database',
+                    dbId: item.id,
+                    relatedOrderId: item.related_order_id
+                };
+            });
+
+        const orderNotifications =
+            (orderResult.data || []).map(order => {
+                const id = `order-${order.id}`;
+                const orderLabel =
+                    order.order_number || order.id;
+
+                return {
+                    id,
+                    title: `Order #${orderLabel}`,
+                    message:
+                        `Order status: ${order.status}. ` +
+                        `Payment status: ${order.payment_status}.`,
+                    type: 'payment',
+                    category: 'Order',
+                    time: new Date(order.created_at).toLocaleString(
+                        'en-PH',
+                        {
+                            dateStyle: 'medium',
+                            timeStyle: 'short'
+                        }
+                    ),
+                    createdAt: order.created_at,
+                    read: Boolean(savedReadState[id]),
+                    source: 'order',
+                    dbId: null,
+                    relatedOrderId: order.id
+                };
+            });
+
+        const bookingNotifications =
+            (bookingResult.data || []).map(booking => {
+                const id = `booking-${booking.id}`;
+
+                const date = booking.booking_date
+                    ? new Date(
+                        `${booking.booking_date}T00:00:00`
+                    ).toLocaleDateString('en-PH', {
+                        dateStyle: 'medium'
+                    })
+                    : 'Date not available';
+
+                const time = booking.booking_time
+                    ? String(booking.booking_time).slice(0, 5)
+                    : '';
+
+                return {
+                    id,
+                    title: `Service Booking #${booking.id}`,
+                    message:
+                        `${booking.pet_name || 'Your pet'} — ` +
+                        `${booking.status}. Appointment: ${date}` +
+                        (time ? ` at ${time}.` : '.'),
+                    type: 'booking',
+                    category: 'Booking',
+                    time: new Date(booking.created_at).toLocaleString(
+                        'en-PH',
+                        {
+                            dateStyle: 'medium',
+                            timeStyle: 'short'
+                        }
+                    ),
+                    createdAt: booking.created_at,
+                    read: Boolean(savedReadState[id]),
+                    source: 'booking',
+                    dbId: null,
+                    relatedOrderId: null
+                };
+            });
+
+        // Show all three sources, newest first.
+        notifications = [
+            ...savedNotifications,
+            ...orderNotifications,
+            ...bookingNotifications
+        ].sort(
+            (a, b) =>
+                new Date(b.createdAt).getTime() -
+                new Date(a.createdAt).getTime()
+        );
 
         renderNotifications();
+
+        console.log('Notifications loaded:', {
+            saved: savedNotifications.length,
+            orders: orderNotifications.length,
+            bookings: bookingNotifications.length
+        });
 
     } catch (error) {
         console.error('Notification loading error:', error);
@@ -1097,6 +1258,7 @@ async function loadNotifications() {
         renderNotifications();
     }
 }
+
 
 
 
@@ -1373,8 +1535,8 @@ document
     );
 
 
-/* MARK ALL READ */
 
+/* MARK ALL READ */
 
 document
     .getElementById('notifMarkAllRead')
@@ -1386,7 +1548,6 @@ document
             } = await supabase.auth.getUser();
 
             if (authError) throw authError;
-
             if (!user) return;
 
             const { error } = await supabase
@@ -1401,56 +1562,99 @@ document
                 item.read = true;
             });
 
+            const storageKey =
+                `furrycornerNotificationRead:${user.id}`;
+
+            const readState = {};
+
+            notifications
+                .filter(item =>
+                    item.source === 'order' ||
+                    item.source === 'booking'
+                )
+                .forEach(item => {
+                    readState[item.id] = true;
+                });
+
+            localStorage.setItem(
+                storageKey,
+                JSON.stringify(readState)
+            );
+
             renderNotifications();
 
         } catch (error) {
-            console.error('Mark all notifications as read failed:', error);
+            console.error(
+                'Mark all notifications as read failed:',
+                error
+            );
         }
     });
 
 
-
 /* INDIVIDUAL NOTIFICATION */
 
-notifList.addEventListener(
-    'click',
-    async event => {
-        const item = event.target.closest('.notif-item');
+notifList.addEventListener('click', async event => {
+    const element = event.target.closest('.notif-item');
 
-        if (!item) return;
+    if (!element) return;
 
-        const notification = notifications.find(
-            n => n.id === item.dataset.id
-        );
+    const notification = notifications.find(
+        item => item.id === element.dataset.id
+    );
 
-        if (!notification || notification.read) return;
+    if (!notification || notification.read) return;
 
-        try {
-            const {
-                data: { user },
-                error: authError
-            } = await supabase.auth.getUser();
+    try {
+        const {
+            data: { user },
+            error: authError
+        } = await supabase.auth.getUser();
 
-            if (authError) throw authError;
+        if (authError) throw authError;
+        if (!user) return;
 
-            if (!user) return;
-
+        if (notification.source === 'database') {
             const { error } = await supabase
                 .from('notifications')
                 .update({ is_read: true })
-                .eq('id', Number(notification.id))
+                .eq('id', notification.dbId)
                 .eq('user_id', user.id);
 
             if (error) throw error;
+        } else {
+            const storageKey =
+                `furrycornerNotificationRead:${user.id}`;
 
-            notification.read = true;
-            renderNotifications();
+            let readState = {};
 
-        } catch (error) {
-            console.error('Mark notification as read failed:', error);
+            try {
+                readState = JSON.parse(
+                    localStorage.getItem(storageKey) || '{}'
+                );
+            } catch {
+                readState = {};
+            }
+
+            readState[notification.id] = true;
+
+            localStorage.setItem(
+                storageKey,
+                JSON.stringify(readState)
+            );
         }
+
+        notification.read = true;
+        renderNotifications();
+
+    } catch (error) {
+        console.error(
+            'Mark notification as read failed:',
+            error
+        );
     }
-);
+});
+
 
 /* =====================================================
    INITIALIZE

@@ -238,41 +238,69 @@ async function refreshNotifBadge() {
 }
 
 
-    function guardActions() {
-        document.addEventListener('click', event => {
-            const control = event.target.closest('a[href], [data-auth-required]');
-            if (!control) {
-                return;
+    
+function guardActions() {
+    document.addEventListener('click', event => {
+        const target = event.target;
+        if (!target || typeof target.closest !== 'function') {
+            return;
+        }
+
+        const control = target.closest('a[href], [data-auth-required]');
+        if (!control) {
+            return;
+        }
+
+        const href = control.getAttribute('href');
+        let targetUrl = null;
+        let targetPage = '';
+
+        if (href) {
+            try {
+                targetUrl = new URL(href, location.href);
+                targetPage = targetUrl.pathname.split('/').pop() || '';
+            } catch (error) {
+                targetUrl = null;
             }
+        }
 
-            const href = control.getAttribute('href');
-            const targetPage = href
-                ? new URL(href, location.href).pathname.split('/').pop()
-                : '';
+        if (authPages.has(targetPage)) {
+            sessionStorage.setItem(skipAuthSplashKey, 'true');
+        }
 
-            if (authPages.has(targetPage)) {
-                sessionStorage.setItem(skipAuthSplashKey, 'true');
-                return;
-            }
+        const protectedLink = protectedPages.has(targetPage);
 
-            if (isAuthenticated) {
-                return;
-            }
-
-            const protectedLink = protectedPages.has(targetPage);
-
-            if (!control.hasAttribute('data-auth-required') && !protectedLink) {
-                return;
-            }
-
+        // Keep the sign-in requirement for protected pages and protected buttons.
+        if (
+            !isAuthenticated &&
+            (control.hasAttribute('data-auth-required') || protectedLink)
+        ) {
             event.preventDefault();
             event.stopImmediatePropagation();
 
             const returnTarget = control.dataset.authReturn
-                || (protectedLink ? control.href : location.href);
+                || (protectedLink && targetUrl
+                    ? targetUrl.href
+                    : location.href);
+
             window.FurryCornerAuth.promptForSignIn(returnTarget);
-        }, true);
-    }
+            return;
+        }
+
+        // Convert same-origin legacy .html links into Angular routes.
+        if (
+            href &&
+            targetUrl &&
+            targetUrl.origin === location.origin &&
+            /\.html$/i.test(targetUrl.pathname)
+        ) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            location.assign(targetUrl.href);
+        }
+    }, true);
+}
+
 
     function installAccountStyles() {
         const style = document.createElement('style');
