@@ -2,7 +2,22 @@
 <?php
 
 header('Content-Type: application/json; charset=utf-8');
-header('Access-Control-Allow-Origin: http://localhost:8100');
+
+$allowedOrigins = [
+    'http://localhost',
+    'https://localhost',
+    'http://localhost:8080',
+    'http://localhost:8100',
+    'https://localhost:8100',
+    'https://furrycorner.online'
+];
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+
+if (in_array($origin, $allowedOrigins, true)) {
+    header('Access-Control-Allow-Origin: ' . $origin);
+    header('Vary: Origin');
+}
+
 header('Access-Control-Allow-Methods: POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
@@ -10,6 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(204);
     exit;
 }
+
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -45,7 +61,7 @@ if (!filter_var($userId, FILTER_VALIDATE_REGEXP, [
     respond(400, ['error' => 'Invalid user ID']);
 }
 
-$allowedMethods = ['gcash', 'card', 'paymaya'];
+$allowedMethods = ['gcash', 'card', 'paymaya', 'saved'];
 
 if (!in_array($paymentMethod, $allowedMethods, true)) {
     respond(400, ['error' => 'Unsupported payment method']);
@@ -129,14 +145,17 @@ try {
                     'name' => 'FurryCorner Order ' . ($order['order_number'] ?? $orderId),
                     'quantity' => 1
                 ]],
-                'payment_method_types' => [$paymentMethod],
+                'payment_method_types' => $paymentMethod === 'saved'
+                    ? ['card', 'gcash', 'paymaya']
+                    : [$paymentMethod],
                 'description' => 'FurryCorner PH order ' . ($order['order_number'] ?? $orderId),
                 'reference_number' => (string)$orderId,
                 
-                'success_url' => 'https://providing-glacial-gradually.ngrok-free.dev/payment-return.php?order_id=' . rawurlencode((string)$orderId),
-                'cancel_url' => 'https://providing-glacial-gradually.ngrok-free.dev/checkout',
+                
+                'success_url' => 'https://furrycorner.online/furrycorner_api/payment-return.php?order_id=' . rawurlencode((string)$orderId),
+                'cancel_url' => 'https://furrycorner.online/checkout',
 
-                'send_email_receipt' => false,
+                'send_email_receipt' => true,
                 'show_description' => true,
                 'show_line_items' => true
             ]
