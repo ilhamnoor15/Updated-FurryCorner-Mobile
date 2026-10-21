@@ -55,7 +55,7 @@ export class AppComponent {
         e.altKey
       ) return;
 
-      const a = (e.target as Element)?.closest?.('a[href') as HTMLAnchorElement | null;
+      const a = (e.target as Element)?.closest?.('a[href]') as HTMLAnchorElement | null;
       if (!a || a.target || a.hasAttribute('download')) return;
 
       const href = a.getAttribute('href') || '';

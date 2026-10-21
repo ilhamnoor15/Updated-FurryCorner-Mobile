@@ -3,12 +3,15 @@
 export const TITLE = `About Us - FurryCorner PH`;
 export const BODY_CLASS = ``;
 
-export const HTML = `<header class="site-header">
-    <div class="header-inner">
-        <a class="brand" href="index.html"><img src="images/logo.png" alt="">About</a>
-        <a class="back-link" href="profile.html">Profile</a>
-    </div>
-</header>
+export const HTML = `<header class="page-header">
+                        <div class="header-inner">
+                            <a class="back-link" href="profile.html" aria-label="Back to My Account">
+                                <span aria-hidden="true">←</span>
+                                <span>Back</span>
+                            </a>
+                            <h1 class="page-title">About</h1>
+                        </div>
+                    </header>
 
 <section class="intro-band" id="about-us" aria-labelledby="page-title">
     <div class="intro-inner">
@@ -33,18 +36,18 @@ export const HTML = `<header class="site-header">
     <section class="section" id="developers">
                         <div class="section-heading"><span class="section-number">02</span><h2>Developers</h2></div>
                         <div class="developer-grid">
-                            <article class="developer-card">
-                    <img class="developer-photo" src="images/developer1.jpg" alt="Developer 1">
+                <article class="developer-card">
+                    <img class="developer-photo" src="images/developer2.jpg" alt="Developer 1">
                     <div class="developer-info">
-                        <h3>Oira, Jhamylle Rhon</h3>
+                        <h3>Buenavista, Jocielle</h3><h3>Oira, Jhamylle Rhon</h3>
                         <p>Team Leader</p>
                     </div>
                 </article>
 
                 <article class="developer-card">
-                    <img class="developer-photo" src="images/developer2.jpg" alt="Developer 2">
+                    <img class="developer-photo" src="images/developer1.jpg" alt="Developer 1">
                     <div class="developer-info">
-                        <h3>Buenavista, Jocielle</h3>
+                        <h3>Oira, Jhamylle Rhon</h3>
                         <p>Team Member</p>
                     </div>
                 </article>
@@ -122,11 +125,38 @@ button,input,textarea{font:inherit}
 h1,h2,h3,.brand{font-family:'Baloo 2',cursive}
 
 .site-header{background:var(--white);border-bottom:1px solid var(--border)}
-.header-inner{width:min(100% - 32px,1080px);min-height:68px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:16px}
 .brand{display:flex;align-items:center;gap:10px;color:var(--blue-dark);font-size:23px;font-weight:800}
 .brand img{width:40px;height:40px;object-fit:contain}
-.back-link{font-weight:800;color:var(--blue-dark);padding:9px 12px;border-radius:8px}
-.back-link:hover{background:var(--cream-light)}
+
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex-shrink: 0;
+    min-height: 40px;
+    padding: 0 8px;
+    border-radius: 10px;
+    color: var(--blue-dark);
+    font-size: 14px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.back-link span:first-child {
+    font-size: 24px;
+    line-height: 1;
+}
+
+.back-link:hover {
+    background: var(--cream-light);
+}
+
+.page-title{
+    font:800 22px 'Baloo 2',cursive;
+    color:var(--blue-dark);
+    text-align:left;
+}
 
 .intro-band{background:var(--blue);padding:44px 16px 48px}
 .intro-inner{width:min(100%,1080px);margin:auto}

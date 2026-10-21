@@ -49,55 +49,79 @@ export const HTML = `<!-- =====================================================
      STATUS NAVIGATION
 ===================================================== -->
 
+
 <nav class="status-navigation">
 
-    <a
-        href="purchase-status.html?status=pay"
-        class="status-tab"
-        data-status="pay">
-
-        To Pay
-
+    <a href="purchase-status.html?status=pay"
+       class="status-tab" data-status="pay">
+        <span class="tab-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="5" width="18" height="15" rx="2"/>
+                <path d="M3 9h18"/>
+                <circle cx="16" cy="14" r="1"/>
+            </svg>
+            <span class="tab-count" id="count-pay">0</span>
+        </span>
+        <span class="tab-label">To Pay</span>
     </a>
 
-
-    <a
-        href="purchase-status.html?status=ship"
-        class="status-tab"
-        data-status="ship">
-
-        To Ship
-
+    <a href="purchase-status.html?status=ship"
+       class="status-tab" data-status="ship">
+        <span class="tab-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 7h18v13H3z"/>
+                <path d="M3 7l4-4h10l4 4"/>
+                <path d="M7 3l3 4 4-4"/>
+                <path d="M7 12h5M7 15h3"/>
+            </svg>
+            <span class="tab-count" id="count-ship">0</span>
+        </span>
+        <span class="tab-label">To Ship</span>
     </a>
 
-
-    <a
-        href="purchase-status.html?status=receive"
-        class="status-tab"
-        data-status="receive">
-
-        To Receive
-
+    <a href="purchase-status.html?status=receive"
+       class="status-tab" data-status="receive">
+        <span class="tab-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 7h12v11H2z"/>
+                <path d="M14 11h4l4 4v3h-8z"/>
+                <circle cx="6" cy="19" r="2"/>
+                <circle cx="18" cy="19" r="2"/>
+                <path d="M5 4h6M3 2h6"/>
+            </svg>
+            <span class="tab-count" id="count-receive">0</span>
+        </span>
+        <span class="tab-label">To Receive</span>
     </a>
 
-
-    <a
-        href="purchase-status.html?status=rate"
-        class="status-tab"
-        data-status="rate">
-
-        To Rate
-
+    <a href="purchase-status.html?status=rate"
+       class="status-tab" data-status="rate">
+        <span class="tab-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9z"/>
+            </svg>
+            <span class="tab-count" id="count-rate">0</span>
+        </span>
+        <span class="tab-label">To Rate</span>
     </a>
 
-
-    <a
-        href="purchase-status.html?status=history"
-        class="status-tab"
-        data-status="history">
-
-        History
-
+    <a href="purchase-status.html?status=history"
+       class="status-tab" data-status="history">
+        <span class="tab-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 7h16v14H4z"/>
+                <path d="M8 7V4h8v3"/>
+                <path d="m10 12-3 3 3 3"/>
+                <path d="M7 15h8a3 3 0 0 0 0-6h-2"/>
+            </svg>
+            <span class="tab-count" id="count-history">0</span>
+        </span>
+        <span class="tab-label">History</span>
     </a>
 
 </nav>
@@ -293,78 +317,87 @@ a{
 }
 
 
-/* =====================================================
-   STATUS NAVIGATION
-===================================================== */
-
-.status-navigation{
-
-    background:white;
-
-    border-bottom:1px solid var(--border);
-
-    display:flex;
-
-    overflow-x:auto;
-
-    scrollbar-width:none;
-
+.status-navigation {
+    background: white;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-around;
+    overflow-x: auto;
+    scrollbar-width: none;
 }
 
-
-.status-navigation::-webkit-scrollbar{
-
-    display:none;
-
+.status-navigation::-webkit-scrollbar {
+    display: none;
 }
 
-
-.status-tab{
-
-    position:relative;
-
-    flex:0 0 auto;
-
-    min-width:90px;
-
-    padding:15px 12px;
-
-    text-align:center;
-
-    font-size:12px;
-
-    font-weight:800;
-
-    color:#777;
-
+.status-tab {
+    position: relative;
+    flex: 1 0 68px;
+    min-width: 68px;
+    padding: 12px 4px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 800;
+    color: #777;
 }
 
-
-.status-tab.active{
-
-    color:var(--blue-dark);
-
+.tab-icon-wrap {
+    position: relative;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
+.tab-icon-wrap svg {
+    width: 30px;
+    height: 30px;
+}
 
-.status-tab.active::after{
+.tab-label {
+    white-space: nowrap;
+}
 
-    content:"";
+.tab-count {
+    position: absolute;
+    top: -7px;
+    right: -13px;
+    min-width: 19px;
+    height: 19px;
+    padding: 0 5px;
+    border-radius: 12px;
+    background: #ef4444;
+    color: white;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 19px;
+    text-align: center;
+    display: none;
+}
 
-    position:absolute;
+.tab-count.has-count {
+    display: block;
+}
 
-    left:18px;
+.status-tab.active {
+    color: var(--blue-dark);
+}
 
-    right:18px;
-
-    bottom:0;
-
-    height:3px;
-
-    background:var(--blue-dark);
-
-    border-radius:5px 5px 0 0;
-
+.status-tab.active::after {
+    content: "";
+    position: absolute;
+    left: 18px;
+    right: 18px;
+    bottom: 0;
+    height: 3px;
+    background: var(--blue-dark);
+    border-radius: 5px 5px 0 0;
 }
 
 
@@ -928,6 +961,71 @@ a{
 
 }
 
+
+.order-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.cancel-button {
+    background: #fff1f2;
+    color: #be123c;
+    border: 1px solid #fecdd3;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.cancel-button:hover {
+    background: #ffe4e6;
+    border-color: #fda4af;
+}
+
+.cancel-button:active {
+    transform: scale(0.97);
+}
+
+.cancel-button:focus-visible {
+    outline: 2px solid #e11d48;
+    outline-offset: 3px;
+}
+
+.cancel-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.order-status-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+}
+
+.payment-status {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: #f3f4f6;
+    color: #4b5563;
+}
+
+.payment-status.paid {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.payment-status.pending {
+    background: #fef3c7;
+    color: #92400e;
+}
 
 /* =====================================================
    DESKTOP

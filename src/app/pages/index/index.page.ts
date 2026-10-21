@@ -15,8 +15,24 @@ export class IndexPage extends LegacyPage {
 
   // Original <script> code of index.html. `location` is a shim that routes through the Angular Router.
   protected run(location: any, __onReady: any): void {
+// Stock Up Today button
+document.addEventListener('pointerup', (event) => {
+    const target = event.target as HTMLElement;
+    const button = target.closest('#stockUpTodayBtn');
 
+    if (!button) return;
 
+    event.preventDefault();
+
+    const categorySection = document.getElementById('category-section');
+
+    if (!categorySection) return;
+
+    categorySection.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+    });
+}, true);
 /* =====================================================
    NAVBAR
 ===================================================== */
@@ -60,7 +76,34 @@ async function loadProductsFromDatabase() {
       name: String(product.name ?? ''),
       description: String(product.description ?? ''),
       category: String(product.category?.name ?? ''),
-      subcategory: '',
+      subcategory: (() => {
+  const name = String(product.name ?? '').toLowerCase();
+  const category = String(product.category?.name ?? '');
+
+  if (category === 'Food') {
+    if (/wet food/.test(name)) return 'Wet Food';
+
+    if (/treat|dental stix/.test(name)) return 'Treats';
+
+    if (/dog food|cat food/.test(name)) return 'Dry Food';
+
+    return '';
+  }
+
+  if (category === 'Accessories') {
+    if (/toy/.test(name)) return 'Toys';
+
+    if (/collar|harness|leash|pet shoes/.test(name)) {
+      return 'Walking Essentials';
+    }
+
+    if (/bowl|pet bed|pet cage|pet stroller|potty pads|brush|comb/.test(name)) {
+      return 'Home Gear';
+    }
+  }
+
+  return '';
+})(),
       price: Number(product.price) || 0,
       originalPrice: 0,
       highlights: '',
@@ -225,8 +268,8 @@ function openProductModal(productId){
     selectedProductId = product.id;
     selectedProductQuantity = Number(product.stock) > 0 ? 1 : 0;
     updateProductModalQuantity();
-    productModalImage.src = `images/product-${product.id}.png`;
-    productModalImage.alt = product.name;
+    productModalImage.src = product.image || 'images/placeholder.png';
+    productModalImage.alt = product.name || 'Product image';
     productModalCategory.textContent = [product.category, product.subcategory].filter(Boolean).join(' / ');
     productModalName.textContent = product.name;
     productModalPrice.textContent = peso(product.price);
@@ -580,16 +623,16 @@ function renderProducts(){
                         </div>
 
 
-                        <button
-                            class="card-btn"
-                            data-auth-required
-                            data-auth-return="index.html"
-                            type="button"
-                            onclick="addToCart(${product.id})">
+                        
+                    <button
+                        class="card-btn"
+                        type="button"
+                        onclick="addToCart(${product.id})">
 
-                            Add to Cart
+                        Add to Cart
 
-                        </button>
+                    </button>
+
 
                     </div>
 
@@ -1364,83 +1407,62 @@ const accountCartOwnerKey = 'furryCornerCartOwnerId';
 let accountCartReady = false;
 let accountCartSyncQueue = Promise.resolve();
 
-function getCart(){
+function getActiveCartKey() {
+    const auth = window.FurryCornerAuth;
+    const userId = auth?.isAuthenticated
+        ? String(auth.userId || localStorage.getItem('loggedInUserId') || '')
+        : '';
 
-    if(!window.FurryCornerAuth.isAuthenticated)
+    return userId
+        ? `furryCornerCart:${userId}`
+        : 'cart';
+}
+
+function getCart() {
+    try {
+        const key = getActiveCartKey();
+        const cart = JSON.parse(localStorage.getItem(key) || '[]');
+
+        return Array.isArray(cart) ? cart : [];
+    } catch (error) {
+        console.error('Cart data could not be loaded:', error);
         return [];
-
-    try{
-
-        const cart =
-            JSON.parse(
-                localStorage.getItem('cart')
-            );
-
-
-        return Array.isArray(cart)
-            ? cart
-            : [];
-
-    }catch(error){
-
-        console.error(
-            'Cart data could not be loaded:',
-            error
-        );
-
-
-        return [];
-
     }
+}
 
+function saveCart(cart) {
+    const safeCart = Array.isArray(cart) ? cart : [];
+    const key = getActiveCartKey();
+
+    localStorage.setItem(key, JSON.stringify(safeCart));
+
+    // Keep the cartUpdated event working for other pages/components.
+    window.dispatchEvent(new CustomEvent('cartUpdated', {
+        detail: { cart: safeCart }
+    }));
 }
 
 
-function saveCart(cart){
-
-    if(!window.FurryCornerAuth.isAuthenticated){
-        localStorage.removeItem('cart');
-        return;
-    }
-
-    localStorage.setItem(
-        'cart',
-        JSON.stringify(cart)
-    );
-
-    localStorage.setItem(accountCartOwnerKey, accountCartUserId);
-
-    if(accountCartReady){
-        syncAccountCart(cart);
-    }
-
-}
-
-
-function syncAccountCart(cart) {
-    // Old PHP cart-sync API removed.
-    // Keep the cart locally until Supabase cart syncing is implemented.
-    return Promise.resolve();
-}
 
 
 async function loadAccountCart() {
-    if (!window.FurryCornerAuth.isAuthenticated) {
-        localStorage.removeItem('cart');
-        localStorage.removeItem('furryCornerGuestCartToken');
-        Object.keys(localStorage)
-            .filter(key => key.startsWith('furryCornerGuestCartSynced:'))
-            .forEach(key => localStorage.removeItem(key));
+    const auth = window.FurryCornerAuth;
+    const userId = auth?.isAuthenticated
+        ? String(auth.userId || localStorage.getItem('loggedInUserId') || '')
+        : '';
 
-        accountCartReady = true;
-        updateCartBadge();
-        renderCartDrawer();
-        return;
+    if (userId) {
+        const accountCartKey = `furryCornerCart:${userId}`;
+
+        // Initialize the account cart from the old shared cart only
+        // when no account-specific cart exists yet.
+        if (localStorage.getItem(accountCartKey) === null) {
+            localStorage.setItem(accountCartKey, '[]');
+        }
     }
 
-    // Old PHP cart-loading API removed.
-    // Keep the current local cart instead of requesting the unavailable server.
     accountCartReady = true;
+
     updateCartBadge();
     renderCartDrawer();
 }
@@ -1470,11 +1492,6 @@ function isLoggedIn(){
 }
 
 function addToCart(productId, quantity = 1){
-
-    if(!window.FurryCornerAuth.isAuthenticated){
-        window.FurryCornerAuth.promptForSignIn('index.html');
-        return;
-    }
 
     const product =
         products.find(
@@ -1593,45 +1610,30 @@ window.addToCart =
 
 function updateCartBadge(){
 
-    const cart =
-        getCart();
+    const cart = getCart();
 
+    const totalItems = cart.reduce(
+        (total, item) =>
+            total + Math.max(0, Number(item.quantity) || 0),
+        0
+    );
 
-    const totalItems =
-        cart.reduce(
-            (total,item) =>
+    // The shared app shell may render the badge outside this page.
+    const badges = document.querySelectorAll('#cartBadge');
 
-                total +
-                Number(
-                    item.quantity || 0
-                ),
+    badges.forEach((badge) => {
+        badge.textContent = String(totalItems);
+        badge.style.display = totalItems > 0 ? 'flex' : 'none';
+        badge.setAttribute('aria-label', `${totalItems} items in cart`);
+    });
 
-            0
-        );
-
-
-    const badge =
-        document.getElementById(
-            'cartBadge'
-        );
-
-
-    if(totalItems > 0){
-
-        badge.textContent =
-            totalItems;
-
-        badge.style.display =
-            'flex';
-
-    }else{
-
-        badge.style.display =
-            'none';
-
-    }
+    // Notify other parts of the app that the cart changed.
+    window.dispatchEvent(new CustomEvent('cartUpdated', {
+        detail: { totalItems }
+    }));
 
 }
+
 
 
 /* =====================================================
@@ -1768,45 +1770,18 @@ let selectedCartItems =
    OPEN CART
 ===================================================== */
 
-function openCartDrawer(){
-
-    if(!window.FurryCornerAuth.isAuthenticated){
-        cartEditMode = false;
-        selectedCartItems.clear();
-        cartDrawer.classList.remove('edit-mode');
-        cartDrawer.classList.add('guest-cart-view');
-        cartDrawerBody.innerHTML = `
-            <div class="guest-cart-empty">
-                <button class="guest-cart-close" type="button" aria-label="Close cart">&times;</button>
-                <svg class="guest-cart-icon" viewBox="0 0 120 100" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                    <path d="M18 15h10l8 56h50l8-43H33" stroke-linecap="round" stroke-linejoin="round"/>
-                    <circle cx="48" cy="84" r="4"/><circle cx="80" cy="84" r="4"/>
-                    <path d="M7 91h103" stroke-linecap="round"/>
-                    <path d="M79 8h1m18 9h1m-34-4h1" stroke-linecap="round"/>
-                </svg>
-                <h3>Your cart is empty</h3>
-                <p>Sign in to view your cart and start shopping</p>
-                <a class="guest-cart-signin" href="signin.html?return=index.html">SIGN IN / REGISTER</a>
-            </div>
-        `;
-        cartDrawerBody.querySelector('.guest-cart-close').addEventListener('click', closeCartDrawer);
-        cartDrawer.classList.add('open');
-        cartOverlay.classList.add('open');
-        return;
-    }
-
+function openCartDrawer() {
     cartDrawer.classList.remove('guest-cart-view');
+
+    // Guests can view their locally saved cart.
+    cartEditMode = false;
+    selectedCartItems.clear();
+    cartDrawer.classList.remove('edit-mode');
 
     renderCartDrawer();
 
-    cartDrawer.classList.add(
-        'open'
-    );
-
-    cartOverlay.classList.add(
-        'open'
-    );
-
+    cartDrawer.classList.add('open');
+    cartOverlay.classList.add('open');
 }
 
 
@@ -2265,6 +2240,13 @@ cartDrawerBody.addEventListener(
 
 
         saveCart(cart);
+
+        console.log('[Cart Debug] Saved cart:', getCart());
+console.log('[Cart Debug] Badge before update:', document.getElementById('cartBadge'));
+
+updateCartBadge();
+
+console.log('[Cart Debug] Badge after update:', document.getElementById('cartBadge')?.textContent);
         updateCartBadge();
         renderCartDrawer();
 
@@ -2352,28 +2334,30 @@ deleteSelectedBtn.addEventListener(
    CHECKOUT
 ===================================================== */
 
-function goToCheckout(items){
 
-    if(
-        !items ||
-        items.length === 0
-    ){
-
+function goToCheckout(items) {
+    if (!Array.isArray(items) || items.length === 0) {
+        console.warn('[Checkout] No items selected.');
         return;
-
     }
 
+    console.log('[Checkout Debug] Selected cart items:', items);
+    console.log('[Checkout Debug] Supabase product IDs:', products.map(p => ({
+        id: p.id,
+        name: p.name,
+        price: p.price
+    })));
 
-    localStorage.setItem(
-        'checkoutItems',
-        JSON.stringify(items)
+    localStorage.setItem('checkoutItems', JSON.stringify(items));
+
+    console.log(
+        '[Checkout Debug] Saved checkoutItems:',
+        localStorage.getItem('checkoutItems')
     );
 
-
-    location.href =
-        'checkout.html';
-
+    location.assign('checkout.html');
 }
+
 
 
 checkoutBtn.addEventListener(
@@ -2675,10 +2659,20 @@ const notificationStorageKey = notificationUserId
 let notifications = [];
 
 
+
 async function loadNotificationBadge() {
     const badge = document.getElementById('bottomNotifBadge');
 
     if (!badge) return;
+
+    const localUserId = localStorage.getItem('loggedInUserId');
+
+    if (!localUserId) {
+        notifications = [];
+        badge.textContent = '';
+        badge.style.display = 'none';
+        return;
+    }
 
     try {
         const { data: { user }, error: authError } =
@@ -2686,11 +2680,13 @@ async function loadNotificationBadge() {
 
         if (authError) throw authError;
 
-        if (!user) {
+        if (!user || user.id !== localUserId) {
             notifications = [];
-            renderNotifications();
+            badge.textContent = '';
+            badge.style.display = 'none';
             return;
         }
+
 
         const readKey = `furrycornerNotificationRead:${user.id}`;
         let readState = {};
@@ -2757,31 +2753,26 @@ const notifBadge =
     );
 
 
-function renderNotifications(){
+function renderNotifications() {
+    const notifBadge = document.getElementById('bottomNotifBadge');
 
-    const unread =
-        notifications.filter(
-            item =>
-                !item.read
-        ).length;
+    if (!notifBadge) return;
 
+    // Always hide the badge when the user is signed out.
+    const userId = localStorage.getItem('loggedInUserId');
 
-    if(unread > 0){
-
-        notifBadge.textContent =
-            unread;
-
-
-        notifBadge.style.display =
-            'flex';
-
-    }else{
-
-        notifBadge.style.display =
-            'none';
-
+    if (!userId) {
+        notifBadge.textContent = '';
+        notifBadge.style.display = 'none';
+        return;
     }
 
+    const unread = notifications.filter(
+        item => !item.read
+    ).length;
+
+    notifBadge.textContent = unread > 99 ? '99+' : String(unread);
+    notifBadge.style.display = unread > 0 ? 'flex' : 'none';
 }
 
 

@@ -171,27 +171,9 @@ document
    BACK BUTTON
 ===================================================== */
 
-function goBack(){
-
-    if(
-        document.referrer &&
-        document.referrer.includes(
-            location.hostname
-        )
-    ){
-
-        window.history.back();
-
-        return;
-
-    }
-
-
-    location.href =
-        "profile.html";
-
+function goBack() {
+    location.href = "profile.html";
 }
-
 
 /* =====================================================
    LOAD ORDERS
@@ -220,6 +202,7 @@ async function loadOrders() {
                 id,
                 order_number,
                 status,
+                payment_status,
                 total,
                 created_at,
                 order_items (
@@ -235,15 +218,18 @@ async function loadOrders() {
 
         if (ordersError) throw ordersError;
 
-        const mappedOrders = (orders || []).map(order => ({
-            ...order,
-            order_id: order.order_number || order.id,
-            order_date: order.created_at,
-            total_amount: order.total,
-            items: order.order_items || []
-        }));
+        
+const mappedOrders = (orders || []).map(order => ({
+    ...order,
+    order_id: order.order_number || order.id,
+    order_date: order.created_at,
+    total_amount: order.total,
+    items: order.order_items || []
+}));
 
-        renderOrders(filterOrders(mappedOrders));
+updateTabCounts(mappedOrders);
+renderOrders(filterOrders(mappedOrders));
+
     } catch (error) {
         console.error('Purchase status error:', error);
         showError(error?.message || 'Unable to load your orders.');
@@ -252,109 +238,86 @@ async function loadOrders() {
 
 
 
+function updateTabCounts(orders) {
+    const counts = {
+        pay: 0,
+        ship: 0,
+        receive: 0,
+        rate: 0,
+        history: orders.length
+    };
+
+    orders.forEach(order => {
+        const status = String(order.status || "").toLowerCase().trim();
+        const paymentStatus = String(order.payment_status || "").toLowerCase().trim();
+
+        if (status === "pending" && paymentStatus !== "paid") {
+            counts.pay++;
+        }
+
+        if (
+            (status === "pending" || status === "processing") &&
+            paymentStatus === "paid"
+        ) {
+            counts.ship++;
+        }
+
+        if (status === "shipped") {
+            counts.receive++;
+        }
+
+        if (status === "delivered") {
+            counts.rate++;
+        }
+    });
+
+    Object.entries(counts).forEach(([key, count]) => {
+        const badge = document.getElementById(`count-${key}`);
+
+        if (badge) {
+            badge.textContent = count > 99 ? "99+" : String(count);
+            badge.classList.toggle("has-count", count > 0);
+        }
+    });
+}
+
 /* =====================================================
    FILTER ORDERS
 ===================================================== */
 
-function filterOrders(orders){
+function filterOrders(orders) {
+    return orders.filter(order => {
+        const status = String(order.status || "").toLowerCase().trim();
+        const paymentStatus = String(order.payment_status || "").toLowerCase().trim();
 
-    /*
-     * History shows everything.
-     */
-
-    if(
-        currentStatus ===
-        "history"
-    ){
-
-        return orders;
-
-    }
-
-
-    return orders.filter(
-        order => {
-
-            const status =
-                String(
-                    order.status ||
-                    ""
-                ).toLowerCase();
-
-
-            /*
-             * TO PAY
-             *
-             * Pending orders.
-             */
-
-            if(
-                currentStatus ===
-                "pay"
-            ){
-
-                return status ===
-                    "pending";
-
-            }
-
-
-            /*
-             * TO SHIP
-             *
-             * Processing orders.
-             */
-
-            if(
-                currentStatus ===
-                "ship"
-            ){
-
-                return status ===
-                    "processing";
-
-            }
-
-
-            /*
-             * TO RECEIVE
-             *
-             * Shipped orders.
-             */
-
-            if(
-                currentStatus ===
-                "receive"
-            ){
-
-                return status ===
-                    "shipped";
-
-            }
-
-
-            /*
-             * TO RATE
-             *
-             * Delivered orders.
-             */
-
-            if(
-                currentStatus ===
-                "rate"
-            ){
-
-                return status ===
-                    "delivered";
-
-            }
-
-
-            return false;
-
+        // PURCHASE HISTORY: Completed or cancelled orders only.
+        if (currentStatus === "history") {
+            return true;
         }
-    );
 
+        // TO PAY: Pending orders that have not been paid.
+        if (currentStatus === "pay") {
+            return status === "pending" && paymentStatus !== "paid";
+        }
+
+        // TO SHIP: Paid orders still being processed.
+        if (currentStatus === "ship") {
+            return (status === "pending" || status === "processing")
+                && paymentStatus === "paid";
+        }
+
+        // TO RECEIVE: Orders that have shipped.
+        if (currentStatus === "receive") {
+            return status === "shipped";
+        }
+
+        // TO RATE: Delivered orders.
+        if (currentStatus === "rate") {
+            return status === "delivered";
+        }
+
+        return false;
+    });
 }
 
 
@@ -394,6 +357,16 @@ function renderOrders(
             )
             .join("");
 
+    container.querySelectorAll('.cancel-button').forEach(button => {
+    button.addEventListener('click', () => {
+        const orderId = button.getAttribute('data-order-id');
+
+        if (orderId) {
+            cancelOrder(orderId);
+        }
+    });
+});
+
 }
 
 
@@ -405,11 +378,21 @@ function createOrderCard(
     order
 ){
 
-    const status =
-        String(
-            order.status ||
-            "Pending"
-        );
+    const status = String(order.status || "Pending");
+
+const paymentStatus = String(
+    order.payment_status || "pending"
+).toLowerCase();
+
+const paymentStatusLabel =
+    paymentStatus === "paid"
+        ? "Paid"
+        : paymentStatus === "pending"
+            ? "Pending"
+            : paymentStatus.charAt(0).toUpperCase() + paymentStatus.slice(1);
+
+const paymentStatusClass =
+    paymentStatus.replace(/\s+/g, "-");
 
 
     const statusClass =
@@ -466,14 +449,15 @@ function createOrderCard(
                 </div>
 
 
-                <span
-                    class="status ${statusClass}">
+                <div class="order-status-group">
+    <span class="status ${statusClass}">
+        ${escapeHTML(status)}
+    </span>
 
-                    ${escapeHTML(
-                        status
-                    )}
-
-                </span>
+    <span class="payment-status ${paymentStatusClass}">
+        Payment: ${escapeHTML(paymentStatusLabel)}
+    </span>
+</div>
 
 
             </div>
@@ -548,18 +532,30 @@ function createOrderCard(
                 </span>
 
 
-                <button
-                    type="button"
-                    class="view-button"
-                    onclick="viewOrder(
-                        ${Number(
-                            order.order_id
-                        )}
-                    )">
+                <div class="order-actions">
+    <button
+        type="button"
+        class="view-button"
+        onclick="viewOrder(
+            ${Number(order.order_id)}
+        )">
+        View Order
+    </button>
 
-                    View Order
-
-                </button>
+    ${
+        String(order.status || '').toLowerCase() === 'pending'
+        && String(order.payment_status || '').toLowerCase() === 'pending'
+        ? `
+            <button
+                type="button"
+                class="cancel-button"
+                data-order-id="${escapeHTML(order.id)}">
+                Cancel Order
+            </button>
+        `
+        : ''
+    }
+</div>
 
             </div>
 
@@ -739,6 +735,55 @@ function viewOrder(orderId: string | number) {
         `/order-confirmation?order_id=${encodeURIComponent(String(orderId))}`;
 }
 
+async function cancelOrder(orderId: string) {
+    if (!loggedUser?.id || !orderId) {
+        return;
+    }
+
+    const confirmed = window.confirm(
+        'Are you sure you want to cancel this order?'
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+        const { data: { user }, error: authError } =
+            await supabase.auth.getUser();
+
+        if (authError) throw authError;
+
+        if (!user || user.id !== loggedUser.id) {
+            throw new Error('Please sign in again.');
+        }
+
+        const { data, error } = await supabase
+            .from('orders')
+            .update({ status: 'cancelled' })
+            .eq('id', orderId)
+            .eq('user_id', user.id)
+            .eq('status', 'pending')
+            .eq('payment_status', 'pending')
+            .select('id')
+            .maybeSingle();
+
+        if (error) throw error;
+
+        if (!data) {
+            throw new Error(
+                'This order can no longer be cancelled. Please refresh your orders.'
+            );
+        }
+
+        await loadOrders();
+    } catch (error: any) {
+        console.error('Cancel order error:', error);
+        window.alert(
+            error?.message || 'Unable to cancel this order.'
+        );
+    }
+}
 /* =====================================================
    FORMAT PRICE
 ===================================================== */
@@ -921,6 +966,8 @@ try { window.goBack = goBack; } catch (e) {}
 
 /* inline onclick="viewOrder(...)" needs a global function */
 try { window.viewOrder = viewOrder; } catch (e) {}
+
+try { window.cancelOrder = cancelOrder; } catch (e) {}
 
   }
 }

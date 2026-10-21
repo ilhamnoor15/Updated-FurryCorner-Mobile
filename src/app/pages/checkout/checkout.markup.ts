@@ -911,18 +911,19 @@ h4,
 
 .success-modal{
     background:var(--white);
-    border-radius:16px;
-    padding:40px 30px;
+    border-radius:18px;
+    border:2px solid var(--blue-dark);
+    padding:36px 28px 28px;
     max-width:420px;
     width:100%;
     text-align:center;
-    box-shadow:0 24px 60px rgba(0,0,0,.25);
+    box-shadow:0 18px 45px rgba(31,36,48,.18);
 }
 
 .success-modal-icon{
     width:80px;
     height:80px;
-    background:var(--blue);
+    background:var(--blue-dark);
     border-radius:50%;
     display:flex;
     align-items:center;
@@ -937,7 +938,9 @@ h4,
 }
 
 .success-modal h2{
-    font-size:24px;
+    font-family:'Baloo 2',cursive;
+    font-size:26px;
+    line-height:1.1;
     font-weight:800;
     margin-bottom:8px;
     color:var(--ink);
@@ -994,12 +997,12 @@ h4,
 }
 
 .success-modal-btn.primary{
-    background:var(--blue);
+    background:var(--blue-dark);
     color:var(--white);
 }
 
 .success-modal-btn.primary:hover{
-    background:var(--blue-dark);
+    background:#4b95dc;
 }
 
 .success-modal-btn.secondary{

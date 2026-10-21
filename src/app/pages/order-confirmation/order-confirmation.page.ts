@@ -100,11 +100,13 @@ async function loadOrder() {
 
         const { data: order, error: orderError } = await supabase
             .from('orders')
+        
             .select(`
                 id,
                 order_number,
                 user_id,
                 status,
+                payment_status,
                 payment_method,
                 subtotal,
                 shipping_fee,
@@ -119,6 +121,7 @@ async function loadOrder() {
                     line_total
                 )
             `)
+
             .eq('user_id', user.id)
             .or(`id.eq.${orderId},order_number.eq.${orderId}`)
             .maybeSingle();
@@ -129,6 +132,114 @@ async function loadOrder() {
             showEmptyOrder('Order not found or you do not have access to it.');
             return;
         }
+
+        // Wait briefly for the PayMongo webhook to update Supabase.
+        const paymentMethod = String(order.payment_method || '').toLowerCase();
+        let confirmedPaymentStatus = String(order.payment_status || '').toLowerCase();
+
+        if (paymentMethod !== 'cod' && confirmedPaymentStatus !== 'paid') {
+            for (let attempt = 0; attempt < 5; attempt++) {
+                await new Promise(resolve => setTimeout(resolve, 2000));
+
+                const { data: latestOrder, error: statusError } = await supabase
+                    .from('orders')
+                    .select('payment_status')
+                    .eq('id', order.id)
+                    .eq('user_id', user.id)
+                    .maybeSingle();
+
+                if (statusError) {
+                    console.error('Could not recheck payment status:', statusError);
+                    break;
+                }
+
+                confirmedPaymentStatus = String(
+                    latestOrder?.payment_status || ''
+                ).toLowerCase();
+
+                if (confirmedPaymentStatus === 'paid') {
+                    break;
+                }
+            }
+        }
+
+        // Clear only after payment is confirmed.
+        
+        // Clear purchased items only after online payment is confirmed.
+        if (
+            paymentMethod !== 'cod' &&
+            confirmedPaymentStatus === 'paid'
+        ) {
+            function getCartProductId(item) {
+                return String(
+                    item.product_id ??
+                    item.productId ??
+                    item.id ??
+                    ''
+                );
+            }
+
+            const purchasedIds = new Set(
+                (order.order_items || []).map(getCartProductId)
+            );
+
+            const cartStorageKey = `furryCornerCart:${user.id}`;
+
+            try {
+                const readCart = key => {
+                    try {
+                        const parsed = JSON.parse(
+                            localStorage.getItem(key) || '[]'
+                        );
+                        return Array.isArray(parsed) ? parsed : [];
+                    } catch {
+                        return [];
+                    }
+                };
+
+                // Update the signed-in user's cart.
+                const userCart = readCart(cartStorageKey);
+                const remainingUserCart = userCart.filter(
+                    item => !purchasedIds.has(getCartProductId(item))
+                );
+
+                localStorage.setItem(
+                    cartStorageKey,
+                    JSON.stringify(remainingUserCart)
+                );
+
+                // Also update the legacy guest cart if it contains purchased items.
+                const guestCart = readCart('cart');
+                localStorage.setItem(
+                    'cart',
+                    JSON.stringify(
+                        guestCart.filter(
+                            item => !purchasedIds.has(getCartProductId(item))
+                        )
+                    )
+                );
+
+                localStorage.removeItem('checkoutItems');
+                window.dispatchEvent(new Event('cartUpdated'));
+
+                console.log(
+                    'Paid order confirmed; cart updated.',
+                    { cartStorageKey, remaining: remainingUserCart.length }
+                );
+            } catch (cartError) {
+                console.error(
+                    'Could not clear purchased cart items:',
+                    cartError
+                );
+            }
+        } else if (paymentMethod !== 'cod') {
+            console.log(
+                'Payment is not confirmed yet. The cart has been preserved.'
+            );
+        }
+
+
+
 
         let address = null;
 

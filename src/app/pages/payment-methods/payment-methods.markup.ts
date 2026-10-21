@@ -3,8 +3,15 @@
 export const TITLE = `Bank Accounts / Cards - FurryCorner PH`;
 export const BODY_CLASS = ``;
 
-export const HTML = `<header class="page-header"><div class="header-inner"><h1 class="page-title">Bank Accounts / Cards</h1><a class="back-link" href="profile.html">Back to profile</a></div></header>
-<main>
+export const HTML = `<header class="page-header">
+                        <div class="header-inner">
+                            <a class="back-link" href="profile.html" aria-label="Back to My Account">
+                                <span aria-hidden="true">←</span>
+                                <span>Back</span>
+                            </a>
+                            <h1 class="page-title">Bank Accounts / Cards</h1>
+                        </div>
+                    </header>
     <section aria-labelledby="method-form-title">
         <h2 class="section-title" id="method-form-title">Add a payment method</h2>
         <form class="method-form" id="methodForm">
@@ -34,9 +41,35 @@ export const CSS = `
 body{min-height:100vh;background:var(--cream);color:var(--ink);font:600 15px 'Nunito',sans-serif;line-height:1.5;padding-bottom:36px}
 a{color:inherit;text-decoration:none}
 .page-header{background:var(--white);border-bottom:1px solid var(--border)}
-.header-inner{max-width:900px;min-height:64px;margin:auto;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px}
-.back-link{color:var(--blue-dark);font-weight:800}
-.page-title{font:800 22px 'Baloo 2',cursive;color:var(--blue-dark);text-align:right}
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex-shrink: 0;
+    min-height: 40px;
+    padding: 0 8px;
+    border-radius: 10px;
+    color: var(--blue-dark);
+    font-size: 14px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.back-link span:first-child {
+    font-size: 24px;
+    line-height: 1;
+}
+
+.back-link:hover {
+    background: var(--cream-light);
+}
+
+.page-title{
+    font:800 22px 'Baloo 2',cursive;
+    color:var(--blue-dark);
+    text-align:left;
+}
 main{max-width:900px;margin:28px auto;padding:0 20px;display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,.9fr);gap:24px;align-items:start}
 .section-title{font:800 21px 'Baloo 2',cursive;margin-bottom:14px}
 .method-form,.method-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px}

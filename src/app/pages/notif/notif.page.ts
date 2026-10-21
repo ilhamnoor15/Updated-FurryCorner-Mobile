@@ -45,44 +45,40 @@ window.addEventListener('scroll', () => {
    CART STORAGE
 ===================================================== */
 
-function getCart(){
+/* =====================================================
+   CART STORAGE — GUEST OR SIGNED-IN USER
+===================================================== */
 
-    try{
+function getCart() {
+    const userId = localStorage.getItem('loggedInUserId');
+    const cartKey = userId ? `furryCornerCart:${userId}` : 'cart';
 
-        const cart =
-            JSON.parse(
-                localStorage.getItem('cart')
-            );
-
-
-        return Array.isArray(cart)
-            ? cart
-            : [];
-
-    }catch(error){
-
-        console.error(
-            'Cart data could not be loaded:',
-            error
-        );
-
-
+    try {
+        const cart = JSON.parse(localStorage.getItem(cartKey) || '[]');
+        return Array.isArray(cart) ? cart : [];
+    } catch (error) {
+        console.error('Cart data could not be loaded:', error);
         return [];
-
     }
-
 }
 
+function saveCart(cart) {
+    const userId = localStorage.getItem('loggedInUserId');
+    const cartKey = userId ? `furryCornerCart:${userId}` : 'cart';
 
-function saveCart(cart){
+    localStorage.setItem(cartKey, JSON.stringify(cart));
+}
 
-    localStorage.setItem(
-        'cart',
-        JSON.stringify(cart)
+function getCartItemId(item) {
+    return String(
+        item.id ??
+        item.product_id ??
+        item.productId ??
+        item.service_id ??
+        item.serviceId ??
+        ''
     );
-
 }
-
 
 /* =====================================================
    PESO FORMAT
@@ -105,49 +101,19 @@ function peso(number){
 /* =====================================================
    CART BADGE
 ===================================================== */
+function updateCartBadge() {
+    const badge = document.getElementById('cartBadge');
+    if (!badge) return;
 
-function updateCartBadge(){
+    const cart = getCart();
+    const totalItems = cart.reduce(
+        (total, item) => total + Number(item.quantity || 0),
+        0
+    );
 
-    const cart =
-        getCart();
-
-
-    const totalItems =
-        cart.reduce(
-            (total,item) =>
-
-                total +
-                Number(
-                    item.quantity || 0
-                ),
-
-            0
-        );
-
-
-    const badge =
-        document.getElementById(
-            'cartBadge'
-        );
-
-
-    if(totalItems > 0){
-
-        badge.textContent =
-            totalItems;
-
-        badge.style.display =
-            'flex';
-
-    }else{
-
-        badge.style.display =
-            'none';
-
-    }
-
+    badge.textContent = String(totalItems);
+    badge.style.display = totalItems > 0 ? 'flex' : 'none';
 }
-
 
 /* =====================================================
    CART DRAWER
@@ -397,9 +363,7 @@ selectAllCheckbox.addEventListener(
 
             cart.forEach(item => {
 
-                selectedCartItems.add(
-                    String(item.id)
-                );
+                selectedCartItems.add(getCartItemId(item));
 
             });
 
@@ -443,7 +407,7 @@ function updateSelectAllCheckbox(){
         cart.every(
             item =>
                 selectedCartItems.has(
-                    String(item.id)
+                    getCartItemId(item)
                 )
         );
 
@@ -452,7 +416,7 @@ function updateSelectAllCheckbox(){
         cart.some(
             item =>
                 selectedCartItems.has(
-                    String(item.id)
+                    getCartItemId(item)
                 )
         );
 
@@ -472,31 +436,26 @@ function updateSelectAllCheckbox(){
    UPDATE DELETE BUTTON & TOTAL DISPLAY
 ===================================================== */
 
-function updateSelectedCartTotal(){
-
+function updateSelectedCartTotal() {
     const cart = getCart();
 
-    const selectedCount = cart.filter(
-        item => selectedCartItems.has(String(item.id))
-    ).length;
+    const selectedItems = cart.filter(item =>
+        selectedCartItems.has(getCartItemId(item))
+    );
 
-    deleteSelectedBtn.disabled = selectedCount === 0;
-    updateSelectAllCheckbox();
+    deleteSelectedBtn.disabled = selectedItems.length === 0;
 
-    // Update Total Display strictly based on selection
     let total = 0;
-    if (selectedCount > 0) {
-        cart.forEach(item => {
-            if (selectedCartItems.has(String(item.id))) {
-                total += Number(item.price) * Number(item.quantity || 0);
-            }
-        });
-    }
-    // If selectedCount === 0, total remains 0
-    
-    drawerTotal.textContent = peso(total);
-}
 
+    selectedItems.forEach(item => {
+        total += Number(item.price || 0) *
+                 Number(item.quantity || 1);
+    });
+
+    drawerTotal.textContent = peso(total);
+
+    updateSelectAllCheckbox();
+}
 
 /* =====================================================
    ITEM CHECKBOX
@@ -627,82 +586,45 @@ cartDrawerBody.addEventListener(
     }
 );
 
-
 /* =====================================================
    DELETE SELECTED
 ===================================================== */
 
-deleteSelectedBtn.addEventListener(
-    'click',
-    () => {
+deleteSelectedBtn.addEventListener('click', () => {
+    const selectedIds = new Set(
+        [...selectedCartItems].map(String)
+    );
 
-        if(
-            selectedCartItems.size === 0
-        ){
-
-            return;
-
-        }
-
-
-        const confirmed =
-            confirm(
-                'Are you sure you want to delete the selected items?'
-            );
-
-
-        if(!confirmed){
-
-            return;
-
-        }
-
-
-        let cart =
-            getCart();
-
-
-        cart =
-            cart.filter(
-                item =>
-                    !selectedCartItems.has(
-                        String(item.id)
-                    )
-            );
-
-
-        saveCart(cart);
-
-
-        selectedCartItems.clear();
-
-        updateCartBadge();
-
-
-        /*
-         * If the cart becomes empty,
-         * completely exit Edit Mode.
-         */
-
-        if(cart.length === 0){
-
-            cartEditMode = false;
-
-            cartDrawer.classList.remove(
-                'edit-mode'
-            );
-
-            cartEdit.textContent =
-                'Edit';
-
-        }
-
-
-        renderCartDrawer();
-
+    if (selectedIds.size === 0) {
+        console.log('No cart items selected.');
+        return;
     }
-);
 
+    if (!window.confirm(
+        'Are you sure you want to delete the selected items?'
+    )) {
+        return;
+    }
+
+    const cart = getCart();
+
+    const updatedCart = cart.filter(item =>
+        !selectedIds.has(getCartItemId(item))
+    );
+
+    console.log('Cart before deletion:', cart);
+    console.log('Selected IDs:', [...selectedIds]);
+    console.log('Cart after deletion:', updatedCart);
+
+    saveCart(updatedCart);
+    selectedCartItems.clear();
+
+    selectAllCheckbox.checked = false;
+    selectAllCheckbox.indeterminate = false;
+
+    updateCartBadge();
+    renderCartDrawer();
+});
 
 /* =====================================================
    CHECKOUT
@@ -769,7 +691,7 @@ function renderCartDrawer(){
         new Set(
             cart.map(
                 item =>
-                    String(item.id)
+                    getCartItemId(item)
             )
         );
 
@@ -868,7 +790,7 @@ function renderCartDrawer(){
 
             const isChecked =
                 selectedCartItems.has(
-                    String(item.id)
+                    getCartItemId(item)
                 );
 
 
@@ -957,18 +879,19 @@ function renderCartDrawer(){
         }).join('');
 
 
-    /* TOTAL - STRICTLY BASED ON SELECTION */
-    let total = 0;
-    if (selectedCartItems.size > 0) {
-        cart.forEach(item => {
-            if (selectedCartItems.has(String(item.id))) {
-                total += Number(item.price) * Number(item.quantity || 0);
-            }
-        });
-    }
-    // If selectedCartItems.size === 0, total remains 0.
+    /* TOTAL - BASED ON SELECTED ITEMS */
+const selectedItems = cart.filter(item =>
+    selectedCartItems.has(getCartItemId(item))
+);
 
-    drawerTotal.textContent = peso(total);
+const total = selectedItems.reduce(
+    (sum, item) =>
+        sum + Number(item.price || 0) *
+              Number(item.quantity || 1),
+    0
+);
+
+drawerTotal.textContent = peso(total);
 
 
     checkoutBtn.disabled =

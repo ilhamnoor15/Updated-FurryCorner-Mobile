@@ -30,69 +30,45 @@ ${appNavbar()}
 
 </div>
 
-<!-- =====================================================
-     CART OVERLAY
-===================================================== -->
 
-<div
-    class="cart-overlay"
-    id="cartOverlay"
-></div>
+<!-- CART OVERLAY -->
+<div id="cartOverlay" class="cart-overlay"></div>
 
-<!-- =====================================================
-     CART DRAWER
-===================================================== -->
-
-<aside
-    class="cart-drawer"
-    id="cartDrawer"
->
-
+<!-- CART DRAWER -->
+<aside id="cartDrawer" class="cart-drawer" aria-label="Shopping cart">
     <div class="cart-drawer-header">
-
-        <h2>
-            Cart
-        </h2>
-
-        <button
-            class="cart-close"
-            id="cartClose"
-            aria-label="Close cart"
-        >
-            ×
-        </button>
-
+        <h2>Cart</h2>
+        <div class="cart-header-actions">
+            <button type="button" class="cart-edit" id="cartEdit">Edit</button>
+            <button type="button" class="cart-close" id="cartClose" aria-label="Close cart">×</button>
+        </div>
     </div>
 
-    <div
-        class="cart-drawer-body"
-        id="cartDrawerBody"
-    ></div>
+    <div id="cartDrawerBody" class="cart-drawer-body"></div>
 
     <div class="cart-drawer-footer">
-
-        <div class="cart-total-row">
-
-            <span>
-                Total
-            </span>
-
-            <strong id="drawerTotal">
-                ₱0.00
-            </strong>
-
+        <div class="normal-footer">
+            <div class="cart-total-row">
+                <div class="cart-total-info">
+                    <span>Total</span>
+                    <strong id="drawerTotal">₱0.00</strong>
+                </div>
+                <button type="button" class="checkout-btn" id="checkoutBtn" data-auth-required data-auth-return="checkout.html" disabled>Checkout</button>
+            </div>
         </div>
 
-        <a
-            href="cart.html"
-            class="view-cart-btn"
-        >
-            View Cart
-        </a>
-
+        <div class="edit-mode-footer">
+            <div class="edit-total-row">
+                <label class="select-all-label">
+                    <input type="checkbox" id="selectAllCheckbox">
+                    <span>Select All</span>
+                </label>
+                <button type="button" class="delete-btn" id="deleteSelectedBtn" disabled>Delete Selected</button>
+            </div>
+        </div>
     </div>
-
 </aside>
+
 
 <!-- =====================================================
      MAIN
@@ -884,13 +860,13 @@ img{
     left:50%;
     top:50%;
     transform:translate(-50%,-50%) scale(.85);
-    background:white;
+    background:#fff;
     width:360px;
     max-width:90vw;
-    padding:25px;
+    padding:26px 22px 20px;
     border-radius:18px;
-    box-shadow:0 15px 45px rgba(0,0,0,.20);
-    border:2px solid var(--blue);
+    border:2px solid var(--blue-dark);
+    box-shadow:0 18px 45px rgba(31,36,48,.18);
     z-index:5000;
     opacity:0;
     visibility:hidden;
@@ -905,32 +881,34 @@ img{
 }
 
 .cart-alert-icon{
-    width:55px;
-    height:55px;
+    width:58px;
+    height:58px;
     margin:0 auto 12px;
     border-radius:50%;
-    background:var(--blue);
-    color:white;
+    background:var(--blue-dark);
+    color:#fff;
     display:flex;
     align-items:center;
     justify-content:center;
-    font-size:27px;
+    font-size:28px;
     font-weight:800;
 }
 
 .cart-alert h3{
-    font-size:22px;
-    margin-bottom:5px;
+    margin-bottom:6px;
+    font-family:'Baloo 2',cursive;
+    font-size:26px;
+    line-height:1.1;
+    color:var(--ink);
 }
 
 .cart-alert p{
     font-size:14px;
-    font-weight:600;
-    opacity:.7;
+    font-weight:700;
+    color:#586273;
 }
-
 /* =====================================================
-   CART OVERLAY
+   CART OVERLAY AND DRAWER
 ===================================================== */
 
 .cart-overlay{
@@ -938,20 +916,16 @@ img{
     inset:0;
     background:rgba(31,36,48,.35);
     backdrop-filter:blur(2px);
-    z-index:3000;
+    z-index:5000;
     opacity:0;
     visibility:hidden;
-    transition:.25s ease;
+    transition:opacity .25s ease, visibility .25s ease;
 }
 
 .cart-overlay.open{
     opacity:1;
     visibility:visible;
 }
-
-/* =====================================================
-   CART DRAWER
-===================================================== */
 
 .cart-drawer{
     position:fixed;
@@ -960,63 +934,143 @@ img{
     width:390px;
     max-width:90vw;
     height:100vh;
+    height:100dvh;
     background:var(--cream-light);
-    z-index:3001;
+    z-index:5001;
     display:flex;
     flex-direction:column;
     transform:translateX(100%);
     transition:transform .3s ease;
     box-shadow:-8px 0 30px rgba(0,0,0,.15);
+    overflow:hidden;
 }
 
 .cart-drawer.open{
     transform:translateX(0);
 }
 
+/* Keep the normal drawer layout on Services */
+.cart-drawer.guest-cart-view{
+    width:390px;
+    max-width:90vw;
+    background:var(--cream-light);
+    box-shadow:-8px 0 30px rgba(0,0,0,.15);
+}
+
+.cart-drawer.guest-cart-view .cart-drawer-header,
+.cart-drawer.guest-cart-view .cart-drawer-footer{
+    display:flex;
+}
+
+.cart-drawer.guest-cart-view .cart-drawer-body{
+    display:block;
+    padding:20px;
+    overflow-y:auto;
+}
+
 .cart-drawer-header{
+    flex-shrink:0;
     background:var(--blue-dark);
-    color:white;
-    padding:22px 24px;
+    color:#fff;
+    padding:18px 20px;
     display:flex;
     align-items:center;
     justify-content:space-between;
+    gap:12px;
 }
 
 .cart-drawer-header h2{
+    margin:0;
+    font-family:'Baloo 2',cursive;
     font-size:24px;
+    line-height:1.2;
+    color:#fff;
+}
+
+.cart-header-actions{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-shrink:0;
+}
+
+.cart-edit{
+    height:34px;
+    padding:0 12px;
+    border:0;
+    border-radius:8px;
+    background:rgba(255,255,255,.18);
+    color:#fff;
+    font-family:'Nunito',sans-serif;
+    font-size:13px;
+    font-weight:800;
+    cursor:pointer;
+    transition:background .2s ease;
+}
+
+.cart-edit:hover{
+    background:rgba(255,255,255,.3);
+}
+
+.cart-edit:disabled{
+    opacity:.5;
+    cursor:not-allowed;
 }
 
 .cart-close{
     width:36px;
     height:36px;
+    flex:0 0 36px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:0;
     border:2px solid rgba(255,255,255,.7);
     border-radius:50%;
     background:transparent;
-    color:white;
+    color:#fff;
+    font-family:'Nunito',sans-serif;
     font-size:25px;
     line-height:1;
     cursor:pointer;
 }
 
+/* =====================================================
+   CART ITEMS
+===================================================== */
+
 .cart-drawer-body{
     flex:1;
+    min-height:0;
     overflow-y:auto;
     padding:20px;
 }
 
 .drawer-cart-item{
-    background:white;
-    border-radius:14px;
-    padding:12px;
-    margin-bottom:12px;
     display:flex;
+    align-items:center;
     gap:12px;
+    margin-bottom:12px;
+    padding:12px;
+    border-radius:14px;
+    background:#fff;
     box-shadow:0 3px 10px rgba(0,0,0,.06);
+}
+
+.drawer-item-checkbox{
+    width:20px;
+    height:20px;
+    flex:0 0 20px;
+    margin:0;
+    accent-color:var(--blue-dark);
+    cursor:pointer;
 }
 
 .drawer-cart-item img{
     width:70px;
     height:70px;
+    flex:0 0 70px;
+    display:block;
     border-radius:10px;
     background:var(--blue);
     object-fit:contain;
@@ -1028,24 +1082,80 @@ img{
 }
 
 .drawer-item-name{
-    font-weight:800;
-    font-size:14px;
     margin-bottom:4px;
-    white-space:nowrap;
     overflow:hidden;
+    color:var(--ink);
+    font-family:'Nunito',sans-serif;
+    font-size:14px;
+    font-weight:800;
+    white-space:nowrap;
     text-overflow:ellipsis;
 }
 
 .drawer-item-price{
     color:var(--blue-dark);
-    font-weight:800;
+    font-family:'Nunito',sans-serif;
     font-size:14px;
+    font-weight:800;
 }
 
-.drawer-item-quantity{
-    font-size:13px;
+.drawer-item-actions{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    justify-content:center;
+    gap:6px;
+    flex-shrink:0;
+}
+
+.drawer-item-qty-control{
+    display:flex;
+    align-items:center;
+    overflow:hidden;
+    border:1.5px solid var(--blue);
+    border-radius:8px;
+    background:#fff;
+}
+
+.qty-btn{
+    width:30px;
+    height:30px;
+    flex:0 0 30px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:0;
+    border:0;
+    background:transparent;
+    color:var(--blue-dark);
+    font-family:'Nunito',sans-serif;
+    font-size:18px;
     font-weight:700;
-    opacity:.7;
+    cursor:pointer;
+}
+
+.qty-btn:hover{
+    background:var(--cream-light);
+}
+
+.qty-btn:active{
+    background:var(--blue-dark);
+    color:#fff;
+}
+
+.qty-val{
+    width:32px;
+    height:30px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-right:1px solid var(--blue);
+    border-left:1px solid var(--blue);
+    color:var(--ink);
+    font-family:'Nunito',sans-serif;
+    font-size:14px;
+    font-weight:800;
+    text-align:center;
 }
 
 .drawer-empty{
@@ -1054,13 +1164,13 @@ img{
     flex-direction:column;
     align-items:center;
     justify-content:center;
-    text-align:center;
     padding:30px;
+    text-align:center;
 }
 
 .drawer-empty h3{
-    font-size:22px;
     margin-bottom:8px;
+    font-size:22px;
 }
 
 .drawer-empty p{
@@ -1068,40 +1178,247 @@ img{
     opacity:.7;
 }
 
+/* =====================================================
+   CART FOOTER — NORMAL AND EDIT MODES
+===================================================== */
+
 .cart-drawer-footer{
-    background:white;
-    padding:20px;
+    flex-shrink:0;
+    padding:16px 20px;
     border-top:1px solid #eee;
+    background:#fff;
+}
+
+.normal-footer{
+    display:block;
+}
+
+.edit-mode-footer{
+    display:none;
+}
+
+.cart-drawer.edit-mode .normal-footer{
+    display:none;
+}
+
+.cart-drawer.edit-mode .edit-mode-footer{
+    display:block;
 }
 
 .cart-total-row{
     display:flex;
     align-items:center;
     justify-content:space-between;
-    margin-bottom:15px;
+    gap:12px;
+    margin:0;
     font-size:16px;
     font-weight:800;
 }
 
-.cart-total-row strong{
-    color:var(--blue-dark);
+.cart-total-info{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    min-width:0;
+    color:var(--ink);
 }
 
-.view-cart-btn{
-    width:100%;
-    height:44px;
-    border-radius:9px;
+.cart-total-info span{
+    white-space:nowrap;
+}
+
+.cart-total-row strong{
+    color:var(--blue-dark);
+    font-size:17px;
+    white-space:nowrap;
+}
+
+.edit-total-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+}
+
+.select-all-label{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    color:var(--ink);
+    font-family:'Nunito',sans-serif;
+    font-size:13px;
+    font-weight:800;
+    white-space:nowrap;
+    cursor:pointer;
+}
+
+.select-all-label input{
+    width:20px;
+    height:20px;
+    margin:0;
+    accent-color:var(--blue-dark);
+    cursor:pointer;
+}
+
+.checkout-btn,
+.delete-btn{
+    width:125px;
+    height:42px;
+    flex:0 0 125px;
     display:flex;
     align-items:center;
     justify-content:center;
+    padding:0;
+    border:0;
+    border-radius:9px;
+    color:#fff;
     font-family:'Nunito',sans-serif;
-    font-size:14px;
+    font-size:12.5px;
     font-weight:800;
+    text-align:center;
+    white-space:nowrap;
     cursor:pointer;
-    background:var(--blue-dark);
-    color:white;
+    transition:background .2s ease;
 }
 
+.checkout-btn{
+    background:var(--blue-dark);
+}
+
+.checkout-btn:hover{
+    background:#4b95dc;
+}
+
+.delete-btn{
+    background:#e0685f;
+}
+
+.delete-btn:hover{
+    background:#c9554d;
+}
+
+.checkout-btn:disabled,
+.delete-btn:disabled{
+    background:#c8cdd3;
+    color:#f5f5f5;
+    opacity:.8;
+    cursor:not-allowed;
+}
+
+/* =====================================================
+   CART MOBILE STYLES
+===================================================== */
+
+@media(max-width:700px){
+
+    .cart-drawer,
+    .cart-drawer.guest-cart-view{
+        width:100%;
+        max-width:100%;
+    }
+
+    .cart-drawer-header{
+        padding:16px 15px;
+    }
+
+    .cart-drawer-header h2{
+        font-size:22px;
+    }
+
+    .cart-header-actions{
+        gap:6px;
+    }
+
+    .cart-edit{
+        height:32px;
+        padding:0 10px;
+        font-size:12px;
+    }
+
+    .cart-close{
+        width:34px;
+        height:34px;
+        flex-basis:34px;
+        font-size:23px;
+    }
+
+    .cart-drawer-body{
+        padding:15px;
+    }
+
+    .drawer-cart-item{
+        gap:8px;
+        padding:10px;
+    }
+
+    .drawer-cart-item img{
+        width:62px;
+        height:62px;
+        flex-basis:62px;
+    }
+
+    .drawer-item-checkbox{
+        width:19px;
+        height:19px;
+        flex-basis:19px;
+    }
+
+    .drawer-item-name,
+    .drawer-item-price{
+        font-size:13px;
+    }
+
+    .qty-btn{
+        width:28px;
+        height:28px;
+        flex-basis:28px;
+        font-size:16px;
+    }
+
+    .qty-val{
+        width:28px;
+        height:28px;
+        font-size:13px;
+    }
+
+    .cart-drawer-footer{
+        padding:14px 15px;
+    }
+
+    .cart-total-row{
+        gap:8px;
+    }
+
+    .cart-total-info{
+        gap:5px;
+    }
+
+    .cart-total-row strong{
+        font-size:15px;
+    }
+
+    .checkout-btn,
+    .delete-btn{
+        width:110px;
+        flex-basis:110px;
+        height:40px;
+        font-size:11.5px;
+    }
+
+    .select-all-label{
+        gap:6px;
+        font-size:12px;
+    }
+
+    .select-all-label input{
+        width:18px;
+        height:18px;
+    }
+
+    .edit-total-row{
+        gap:8px;
+    }
+}
 /* =====================================================
    MOBILE BOTTOM NAVIGATION
 ===================================================== */
@@ -1175,6 +1492,39 @@ img{
 
 .mobile-bottom-nav .bottom-nav-item.active:hover{
     color:var(--blue-dark);
+}
+
+/* =====================================================
+   NAVBAR CART BADGE — MATCH HOME
+===================================================== */
+
+.cart-badge{
+    position:absolute;
+    top:2px;
+    right:0;
+
+    min-width:18px;
+    height:18px;
+    padding:0 4px;
+
+    display:none;
+    align-items:center;
+    justify-content:center;
+
+    border-radius:50%;
+    background:var(--blue-dark, #5CA3E8);
+    color:white;
+
+    font-family:'Nunito',sans-serif;
+    font-size:10px;
+    font-weight:800;
+    line-height:1;
+
+    border:2px solid white;
+}
+
+.navbar .cart-link{
+    position:relative;
 }
 
 /* =====================================================

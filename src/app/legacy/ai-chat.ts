@@ -23,6 +23,11 @@ export function initAiChat(): void {
     --blue-dark:#5CA3E8;
 }
 
+/* Hide AI assistant while the Profile cart drawer is open */
+body.profile-cart-open #fcAiRoot {
+  display: none !important;
+}
+
 #fcAiBtn {
   position: fixed;
   right: 18px;

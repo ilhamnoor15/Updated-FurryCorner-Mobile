@@ -55,12 +55,27 @@ searchInput.addEventListener('input', () => {
    CART
 ===================================================== */
 
-function getCart(){
+function getCart() {
+    const userId = localStorage.getItem('loggedInUserId');
+    const cartKey = userId ? `furryCornerCart:${userId}` : 'cart';
 
-    return JSON.parse(
-        localStorage.getItem('cart')
-    ) || [];
+    try {
+        const items = JSON.parse(localStorage.getItem(cartKey) || '[]');
+        return Array.isArray(items) ? items : [];
+    } catch (error) {
+        console.error('Unable to load cart:', error);
+        return [];
+    }
+}
 
+function saveCart(cart) {
+    const userId = localStorage.getItem('loggedInUserId');
+    const cartKey = userId ? `furryCornerCart:${userId}` : 'cart';
+
+    localStorage.setItem(
+        cartKey,
+        JSON.stringify(Array.isArray(cart) ? cart : [])
+    );
 }
 
 /* =====================================================
@@ -79,132 +94,471 @@ function peso(number){
 
 }
 
-/* =====================================================
-   CART DRAWER
-===================================================== */
+/* CART DRAWER */
+const cartDrawer = document.getElementById('cartDrawer');
+const cartOverlay = document.getElementById('cartOverlay');
+const cartClose = document.getElementById('cartClose');
+const cartDrawerBody = document.getElementById('cartDrawerBody');
+const drawerTotal = document.getElementById('drawerTotal');
+const cartEdit = document.getElementById('cartEdit');
+const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
+const checkoutBtn = document.getElementById('checkoutBtn');
 
-const cartDrawer =
-    document.getElementById('cartDrawer');
+let cartEditMode = false;
+let selectedCartItems = new Set();
 
-const cartOverlay =
-    document.getElementById('cartOverlay');
+function getCartItemId(item) {
+    return String(
+        item.id ??
+        item.product_id ??
+        item.productId ??
+        item.service_id ??
+        item.serviceId ??
+        ''
+    );
+}
 
-const cartClose =
-    document.getElementById('cartClose');
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, character => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    })[character]);
+}
 
-const cartDrawerBody =
-    document.getElementById('cartDrawerBody');
+function getCartItemPrice(item) {
+    return Number(
+        item.price ??
+        item.product_price ??
+        item.unit_price ??
+        item.selling_price ??
+        0
+    ) || 0;
+}
 
-const drawerTotal =
-    document.getElementById('drawerTotal');
+function getCartItemQuantity(item) {
+    const quantity = Number(item.quantity ?? item.qty ?? 1);
+    return Number.isFinite(quantity) && quantity > 0
+        ? Math.floor(quantity)
+        : 1;
+}
 
-function openCartDrawer(){
+function updateCartBadge() {
+    const badge = document.getElementById('cartBadge');
+    if (!badge) return;
+
+    const quantity = getCart().reduce(
+        (sum, item) => sum + getCartItemQuantity(item),
+        0
+    );
+
+    badge.textContent = String(quantity);
+    badge.style.display = quantity > 0 ? 'flex' : 'none';
+}
+
+function updateSelectAllCheckbox() {
+    if (!selectAllCheckbox) return;
+
+    const checkboxes = cartDrawerBody
+        ? Array.from(cartDrawerBody.querySelectorAll('.drawer-item-checkbox'))
+        : [];
+
+    const checkedCount = checkboxes.filter(box => box.checked).length;
+
+    selectAllCheckbox.checked =
+        checkboxes.length > 0 && checkedCount === checkboxes.length;
+
+    selectAllCheckbox.indeterminate =
+        checkedCount > 0 && checkedCount < checkboxes.length;
+}
+
+
+function updateSelectedCartTotal() {
+    const cart = getCart();
+
+    const selectedItems = cart.filter(item =>
+        selectedCartItems.has(getCartItemId(item))
+    );
+
+    const total = selectedItems.reduce(
+        (sum, item) =>
+            sum + getCartItemPrice(item) * getCartItemQuantity(item),
+        0
+    );
+
+    if (drawerTotal) {
+        drawerTotal.textContent = peso(total);
+    }
+
+    if (deleteSelectedBtn) {
+        deleteSelectedBtn.disabled = selectedItems.length === 0;
+    }
+
+    if (checkoutBtn) {
+        checkoutBtn.disabled = selectedItems.length === 0;
+    }
+
+    updateSelectAllCheckbox();
+}
+
+
+function openCartDrawer() {
+    if (!cartDrawer || !cartOverlay) return;
+
+    cartEditMode = false;
+    selectedCartItems.clear();
+
+    cartDrawer.classList.remove('guest-cart-view', 'edit-mode');
+    if (cartEdit) cartEdit.textContent = 'Edit';
 
     renderCartDrawer();
 
     cartDrawer.classList.add('open');
-
     cartOverlay.classList.add('open');
-
 }
 
-function closeCartDrawer(){
+function closeCartDrawer() {
+    if (!cartDrawer || !cartOverlay) return;
 
-    cartDrawer.classList.remove('open');
-
+    cartDrawer.classList.remove('open', 'edit-mode', 'guest-cart-view');
     cartOverlay.classList.remove('open');
 
+    cartEditMode = false;
+    selectedCartItems.clear();
+
+    if (cartEdit) cartEdit.textContent = 'Edit';
+
+    if (selectAllCheckbox) {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = false;
+    }
+
+    if (deleteSelectedBtn) deleteSelectedBtn.disabled = true;
 }
 
-cartClose.addEventListener(
-    'click',
-    closeCartDrawer
+if (cartClose) {
+    cartClose.addEventListener('click', closeCartDrawer);
+}
+
+if (cartOverlay) {
+    cartOverlay.addEventListener('click', closeCartDrawer);
+}
+
+if (cartEdit) {
+    cartEdit.addEventListener('click', () => {
+        cartEditMode = !cartEditMode;
+
+        if (cartDrawer) {
+            cartDrawer.classList.toggle('edit-mode', cartEditMode);
+        }
+
+        cartEdit.textContent = cartEditMode ? 'Done' : 'Edit';
+
+        if (!cartEditMode) {
+            selectedCartItems.clear();
+
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            }
+        }
+
+        renderCartDrawer();
+    });
+}
+
+if (selectAllCheckbox) {
+    selectAllCheckbox.addEventListener('change', () => {
+        const checkboxes = cartDrawerBody
+            ? cartDrawerBody.querySelectorAll('.drawer-item-checkbox')
+            : [];
+
+        selectedCartItems.clear();
+
+        if (selectAllCheckbox.checked) {
+            checkboxes.forEach(checkbox => {
+                selectedCartItems.add(String(checkbox.dataset.id));
+            });
+        }
+
+        renderCartDrawer();
+    });
+}
+
+if (cartDrawerBody) {
+    cartDrawerBody.addEventListener('change', event => {
+        const checkbox = event.target.closest('.drawer-item-checkbox');
+
+        if (!checkbox) return;
+
+        const checkedBoxes = Array.from(
+            cartDrawerBody.querySelectorAll('.drawer-item-checkbox:checked')
+        );
+
+        selectedCartItems = new Set(
+            checkedBoxes.map(box => String(box.dataset.id))
+        );
+
+        if (deleteSelectedBtn) {
+            deleteSelectedBtn.disabled = checkedBoxes.length === 0;
+        }
+
+        if (checkoutBtn) {
+            checkoutBtn.disabled = checkedBoxes.length === 0;
+        }
+
+        updateSelectAllCheckbox();
+    });
+
+    cartDrawerBody.addEventListener('click', event => {
+        const button = event.target.closest('.qty-btn');
+        if (!button) return;
+
+        const itemElement = button.closest('.drawer-cart-item');
+        if (!itemElement) return;
+
+        const itemId = String(itemElement.dataset.id);
+        const cart = getCart();
+        const item = cart.find(
+            cartItem => getCartItemId(cartItem) === itemId
+        );
+
+        if (!item) return;
+
+        let quantity = getCartItemQuantity(item);
+
+        if (button.classList.contains('plus')) {
+            const stock = Number(item.stock ?? item.quantity_available);
+
+            if (Number.isFinite(stock) && stock >= 0 && quantity >= stock) {
+                return;
+            }
+
+            quantity += 1;
+        } else if (button.classList.contains('minus')) {
+            quantity -= 1;
+
+            if (quantity <= 0) {
+                const confirmed = window.confirm(
+                    'Remove this item from your cart?'
+                );
+
+                if (!confirmed) return;
+
+                const updatedCart = cart.filter(
+                    cartItem => getCartItemId(cartItem) !== itemId
+                );
+
+                saveCart(updatedCart);
+                selectedCartItems.delete(itemId);
+                updateCartBadge();
+                renderCartDrawer();
+                return;
+            }
+        }
+
+        item.quantity = quantity;
+        if ('qty' in item) item.qty = quantity;
+
+        saveCart(cart);
+        updateCartBadge();
+        renderCartDrawer();
+    });
+}
+
+
+
+if (deleteSelectedBtn) {
+    deleteSelectedBtn.addEventListener('click', () => {
+        const checkedBoxes = Array.from(
+            cartDrawerBody?.querySelectorAll('.drawer-item-checkbox:checked') || []
+        );
+
+        const selectedIds = new Set(
+            checkedBoxes.map(box => String(box.dataset.id))
+        );
+
+        if (selectedIds.size === 0) {
+            console.log('No selected cart items.');
+            return;
+        }
+
+        const confirmed = window.confirm(
+    'Are you sure you want to delete the selected items?'
 );
 
-cartOverlay.addEventListener(
-    'click',
-    closeCartDrawer
-);
+if (!confirmed) {
+    return;
+}
 
-/* =====================================================
-   RENDER CART
-===================================================== */
+        const updatedCart = getCart().filter(
+            item => !selectedIds.has(getCartItemId(item))
+        );
 
-function renderCartDrawer(){
+        saveCart(updatedCart);
+        selectedCartItems.clear();
+
+        if (selectAllCheckbox) {
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = false;
+        }
+
+        updateCartBadge();
+        renderCartDrawer();
+
+        console.log('Cart after deletion:', getCart());
+    });
+}
+
+
+if (checkoutBtn) {
+    checkoutBtn.addEventListener('click', () => {
+        const cart = getCart();
+
+        const selectedItems = cart.filter(item =>
+            selectedCartItems.has(getCartItemId(item))
+        );
+
+        const itemsToCheckout =
+            selectedItems.length > 0 ? selectedItems : cart;
+
+        if (itemsToCheckout.length === 0) {
+            window.alert('Your cart is empty.');
+            return;
+        }
+
+        const user = getLoggedInUser();
+        const userId =
+            localStorage.getItem('loggedInUserId') ||
+            user?.user_id ||
+            user?.id;
+
+        if (!userId) {
+            location.href = 'signin.html?return=checkout.html';
+            return;
+        }
+
+        localStorage.setItem(
+            'checkoutItems',
+            JSON.stringify(itemsToCheckout)
+        );
+
+        // Navigate through the legacy page route.
+        location.assign('checkout.html');
+    });
+}
+/* RENDER CART */
+function renderCartDrawer() {
+    if (!cartDrawerBody || !drawerTotal) return;
 
     const cart = getCart();
 
-    if(cart.length === 0){
+    if (cart.length === 0) {
+        selectedCartItems.clear();
 
         cartDrawerBody.innerHTML = `
-
             <div class="drawer-empty">
-
-                <h3>
-                    Your cart is empty
-                </h3>
-
-                <p>
-                    Add some products to your cart to see them here.
-                </p>
-
+                <h3>Your cart is empty</h3>
+                <p>Add some products to your cart to see them here.</p>
             </div>
-
         `;
 
-        drawerTotal.textContent =
-            '₱0.00';
+        drawerTotal.textContent = peso(0);
+
+        if (cartEdit) {
+            cartEdit.disabled = true;
+            cartEdit.textContent = 'Edit';
+        }
+
+        if (selectAllCheckbox) {
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = false;
+            selectAllCheckbox.disabled = true;
+        }
+
+        if (deleteSelectedBtn) deleteSelectedBtn.disabled = true;
+        if (checkoutBtn) checkoutBtn.disabled = true;
 
         return;
-
     }
 
-    let total = 0;
+    if (cartEdit) cartEdit.disabled = false;
+    if (selectAllCheckbox) selectAllCheckbox.disabled = false;
 
-    cartDrawerBody.innerHTML =
-        cart.map(item => {
+    // Remove selected IDs that no longer exist in the cart.
+    const existingIds = new Set(cart.map(getCartItemId));
 
-            total +=
-                Number(item.price) *
-                Number(item.quantity);
+    selectedCartItems = new Set(
+        [...selectedCartItems].filter(id => existingIds.has(id))
+    );
 
-            return `
+    cartDrawerBody.innerHTML = cart.map(item => {
+        const id = getCartItemId(item);
+        const name = item.name ?? item.product_name ?? item.service_name ?? 'Item';
+        const image = item.image_url ??
+            item.image ??
+            item.imageUrl ??
+            item.product_image ??
+            `images/product-${id}.png`;
 
-                <div class="drawer-cart-item">
+        const price = getCartItemPrice(item);
+        const quantity = getCartItemQuantity(item);
+        const checked = selectedCartItems.has(id) ? 'checked' : '';
 
-                    
-<img
-    src="${item.image_url || item.image || item.imageUrl || item.product_image || `images/product-${item.id}.png`}"
-    alt="${item.name}"
-    onerror="this.onerror=null; this.src='images/product-${item.id}.png';">
+        return `
+  <div class="drawer-cart-item" data-id="${escapeHtml(id)}">
+    <input
+      type="checkbox"
+      class="drawer-item-checkbox"
+      data-id="${escapeHtml(id)}"
+      aria-label="Select ${escapeHtml(name)}"
+      ${checked}
+    >
 
+    <img
+      src="${escapeHtml(image)}"
+      alt="${escapeHtml(name)}"
+      onerror="this.onerror=null;"
+    >
 
-                    <div class="drawer-item-info">
+    <div class="drawer-item-info">
+      <div class="drawer-item-name">${escapeHtml(name)}</div>
+      <div class="drawer-item-price">${peso(price)}</div>
+    </div>
 
-                        <div class="drawer-item-name">
-                            ${item.name}
-                        </div>
+    <div class="drawer-item-actions">
+      <div class="drawer-item-qty-control">
+        <button
+          type="button"
+          class="qty-btn minus"
+          data-id="${escapeHtml(id)}"
+          aria-label="Decrease quantity"
+        >−</button>
 
-                        <div class="drawer-item-price">
-                            ${peso(item.price)}
-                        </div>
+        <span class="qty-val">${quantity}</span>
 
-                        <div class="drawer-item-quantity">
-                            Quantity: ${item.quantity}
-                        </div>
+        <button
+          type="button"
+          class="qty-btn plus"
+          data-id="${escapeHtml(id)}"
+          aria-label="Increase quantity"
+        >+</button>
+      </div>
+    </div>
+  </div>`;
+    }).join('');
 
-                    </div>
+    cartDrawer.classList.toggle('edit-mode', cartEditMode);
+    if (cartEdit) cartEdit.textContent = cartEditMode ? 'Done' : 'Edit';
 
-                </div>
-
-            `;
-
-        }).join('');
-
-    drawerTotal.textContent =
-        peso(total);
-
+    updateSelectedCartTotal();
 }
+
+renderCartDrawer();
+updateCartBadge();
 
 /* =====================================================
    SERVICES DATA FROM DATABASE
@@ -384,9 +738,8 @@ function renderServiceGrids(){
                                     </div>
 
                                     <button
+                                        type="button"
                                         class="book-btn"
-                                        data-auth-required
-                                        data-auth-return="services.html"
                                         data-service-id="${service.id}"
                                     >
                                         Book Now
@@ -1112,20 +1465,25 @@ console.log('SELECTED BOOKING TIME:', bookingTime);
                SUCCESS
             ===================================== */
 
-            if (data.success) {
-                console.log(
-                    'Booking created:',
-                    data.booking?.id
-                );
+            
+if (data.success) {
+    console.log(
+        'Booking created:',
+        data.booking?.id
+    );
 
-                renderConfirmation(
-                    service,
-                    petName,
-                    bookingDate,
-                    bookingTime,
-                    selectedAddress
-                );
-            } else {
+    // Refresh the notification badge immediately after booking succeeds.
+    await updateServiceNotificationBadge();
+
+    renderConfirmation(
+        service,
+        petName,
+        bookingDate,
+        bookingTime,
+        selectedAddress
+    );
+}
+ else {
                 alert(
                     data.error ||
                     data.message ||
@@ -1246,10 +1604,17 @@ function renderConfirmation(
                     ${time}
                 </div>
 
+                
                 <div>
                     <strong>Service address:</strong>
-                    ${escapeBookingHtml(address.address_label)} - ${escapeBookingHtml(address.address_line)}, ${escapeBookingHtml(address.city)}, ${escapeBookingHtml(address.province)} ${escapeBookingHtml(address.postal_code)}
+                    ${escapeBookingHtml(address.label || 'Saved address')} -
+                    ${escapeBookingHtml(address.address_line || '')},
+                    ${escapeBookingHtml(address.barangay || '')},
+                    ${escapeBookingHtml(address.city || '')},
+                    ${escapeBookingHtml(address.province || '')}
+                    ${escapeBookingHtml(address.postal_code || '')}
                 </div>
+
 
             </div>
 
@@ -1339,10 +1704,15 @@ function getLoggedInUser(){
 }
 
 
-function isLoggedIn(){
+function isLoggedIn() {
+    const user = getLoggedInUser();
+    const userId = localStorage.getItem('loggedInUserId');
 
-    return !!getLoggedInUser();
-
+    return !!(
+        userId ||
+        user?.user_id ||
+        user?.id
+    );
 }
 
 function openBooking(serviceId){
@@ -1457,7 +1827,13 @@ document.addEventListener(
 ===================================================== */
 
 renderCartDrawer();
+const badge = document.getElementById('bottomNotifBadge') as HTMLElement | null;
+const userId = localStorage.getItem('loggedInUserId');
 
+if (badge && !userId) {
+    badge.textContent = '';
+    badge.style.display = 'none';
+}
 
 async function updateServiceNotificationBadge() {
     const badge = document.getElementById('bottomNotifBadge');
@@ -1536,19 +1912,33 @@ updateServiceNotificationBadge();
 /* =====================================================
    TOP BAR CART BUTTON (shared top bar)
 ===================================================== */
-function refreshNavCartBadge(){
+function refreshNavCartBadge() {
     const badge = document.getElementById('cartBadge');
-    if(!badge) return;
-    let items = [];
-    try { items = JSON.parse(localStorage.getItem('cart') || '[]'); } catch(e) { items = []; }
-    const total = Array.isArray(items) ? items.reduce((t,i) => t + Number(i.quantity || 0), 0) : 0;
-    badge.textContent = total;
+    if (!badge) return;
+
+    const items = getCart();
+    const total = items.reduce(
+        (sum, item) => sum + Number(item.quantity || 0),
+        0
+    );
+
+    badge.textContent = String(total);
     badge.style.display = total > 0 ? 'flex' : 'none';
 }
 refreshNavCartBadge();
 window.addEventListener('storage', refreshNavCartBadge);
 
-document.getElementById('cartToggle')?.addEventListener('click', openCartDrawer);
+const cartToggle = document.getElementById('cartToggle');
+
+if (cartToggle) {
+    cartToggle.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        openCartDrawer();
+    });
+} else {
+    console.error('Services cart button #cartToggle was not found.');
+}
 
   }
 }

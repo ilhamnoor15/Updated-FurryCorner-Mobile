@@ -17,12 +17,6 @@ body{min-height:100vh;background:#FCEBD6}
 .panel{width:100%;max-width:390px;padding:26px;background:#fff;border-radius:16px;box-shadow:0 8px 24px rgba(88,63,35,.08);text-align:center}
 .panel::before{content:"";display:block;width:140px;height:140px;margin:0 auto 10px;background:url("images/logo.png") center/contain no-repeat}
 .panel h1{font-size:27px;margin-bottom:6px}
-.intro{margin:0 0 20px;font-size:15px;color:#929caf}
-.google-button{width:100%;height:52px;border:1px solid #dce2ea;border-radius:10px;background:#fff;color:var(--ink);font:800 16px 'Nunito',sans-serif;display:flex;align-items:center;justify-content:center;gap:14px;cursor:pointer}
-.google-mark{font:800 20px Arial,sans-serif;color:#4285f4}
-.google-mark{width:20px;height:20px;flex:0 0 auto}
-.or-divider{display:flex;align-items:center;gap:14px;margin:20px 0 22px;color:#929caf;font-size:13px;font-weight:800}.or-divider::before,.or-divider::after{content:"";height:1px;background:#dce2ea;flex:1}
-.name-fields{display:grid;grid-template-columns:1fr 1fr;gap:15px}
 .field{text-align:left;margin-top:0;margin-bottom:16px}.field label{display:none}.field input{height:50px;padding:0 15px;border-radius:10px;font-size:15px;color:var(--ink)}
 .button{height:52px;margin-top:0;border-radius:10px;font-size:16px}.signin{margin-top:20px;font-size:15px}
 @media(max-width:480px){.page{padding:16px 12px}.panel{padding:22px 18px;border-radius:14px}.panel::before{width:115px;height:115px}.panel h1{font-size:25px}.intro{font-size:14px}.google-button{font-size:15px}.field input{font-size:14px}.signin{font-size:14px}}

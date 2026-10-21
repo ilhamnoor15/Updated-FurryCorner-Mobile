@@ -3,7 +3,15 @@
 export const TITLE = `Language - FurryCorner`;
 export const BODY_CLASS = ``;
 
-export const HTML = `<header class="site-header"><div class="header-inner"><a class="brand" href="index.html"><img src="images/logo.png" alt="">Language</a><a class="back-link" href="profile.html">Profile</a></div></header>
+export const HTML = `<header class="page-header">
+                        <div class="header-inner">
+                            <a class="back-link" href="profile.html" aria-label="Back to My Account">
+                                <span aria-hidden="true">←</span>
+                                <span>Back</span>
+                            </a>
+                            <h1 class="page-title">Language</h1>
+                        </div>
+                    </header>
 <section class="intro-band"><div class="intro-inner"><p class="eyebrow">Settings</p><h1>Language</h1><p>Choose your preferred app language.</p></div></section>
 <main class="content settings-content">
   <div class="panel settings-panel">
@@ -24,10 +32,8 @@ body{font-family:'Nunito',sans-serif;color:var(--ink);background:var(--cream-lig
 a{color:inherit;text-decoration:none}
 h1,h2,h3,.brand{font-family:'Baloo 2',cursive}
 .site-header{background:var(--white);border-bottom:1px solid var(--border)}
-.header-inner{width:min(100% - 32px,1080px);min-height:68px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:16px}
 .brand{display:flex;align-items:center;gap:10px;color:var(--blue-dark);font-size:23px;font-weight:800}
 .brand img{width:40px;height:40px;object-fit:contain}
-.back-link{font-weight:800;color:var(--blue-dark);padding:9px 12px;border-radius:8px}
 .intro-band{background:var(--blue);padding:42px 16px}
 .intro-inner{width:min(100%,960px);margin:auto}
 .eyebrow{color:#245784;font-size:12px;font-weight:800;text-transform:uppercase}
@@ -35,6 +41,36 @@ h1,h2,h3,.brand{font-family:'Baloo 2',cursive}
 .intro-band p{max-width:640px;color:#26394b}
 .content{width:min(100% - 32px,880px);margin:auto}
 .back-link:focus-visible{outline:3px solid #245784;outline-offset:3px}
+
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex-shrink: 0;
+    min-height: 40px;
+    padding: 0 8px;
+    border-radius: 10px;
+    color: var(--blue-dark);
+    font-size: 14px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.back-link span:first-child {
+    font-size: 24px;
+    line-height: 1;
+}
+
+.back-link:hover {
+    background: var(--cream-light);
+}
+
+.page-title{
+    font:800 22px 'Baloo 2',cursive;
+    color:var(--blue-dark);
+    text-align:left;
+}
 @media(max-width:560px){.header-inner{min-height:60px}.brand{font-size:20px}.brand img{width:34px;height:34px}.intro-band{padding:34px 16px}.intro-band h1{font-size:34px}}
 
 .lang-list{display:flex;flex-direction:column;gap:10px;padding:12px 0}

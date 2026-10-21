@@ -10,6 +10,7 @@ export const routes: Routes = [
   { path: 'index', redirectTo: '', pathMatch: 'full' },
   { path: 'language', loadComponent: () => import('./pages/language/language.page').then(m => m.LanguagePage) },
   { path: 'my-addresses', loadComponent: () => import('./pages/my-addresses/my-addresses.page').then(m => m.MyAddressesPage) },
+  {path: 'bookings', loadComponent: () => import('./pages/bookings/bookings.page').then(m => m.BookingsPage)},
   { path: 'notif', loadComponent: () => import('./pages/notif/notif.page').then(m => m.NotifPage) },
   { path: 'notification-settings', loadComponent: () => import('./pages/notification-settings/notification-settings.page').then(m => m.NotificationSettingsPage) },
   { path: 'order-confirmation', loadComponent: () => import('./pages/order-confirmation/order-confirmation.page').then(m => m.OrderConfirmationPage) },

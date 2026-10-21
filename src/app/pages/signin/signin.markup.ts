@@ -18,47 +18,6 @@ export const HTML = `<div class="page">
             Sign in to continue to FurryCorner
         </p>
 
-        <!-- Google Login -->
-        <button
-            type="button"
-            class="google-button"
-            id="googleButton"
-        >
-            <span class="google-icon">
-                <svg
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                >
-                    <path
-                        fill="#4285F4"
-                        d="M21.35 12.27c0-.68-.06-1.35-.17-1.98H12v3.75h5.23a4.47 4.47 0 0 1-1.94 2.93v2.44h3.14c1.84-1.69 2.92-4.18 2.92-7.14z"
-                    />
-
-                    <path
-                        fill="#34A853"
-                        d="M12 21.7c2.63 0 4.84-.87 6.45-2.35l-3.14-2.44c-.87.58-1.98.93-3.31.93-2.54 0-4.7-1.72-5.47-4.03H3.29v2.52A9.74 9.74 0 0 0 12 21.7z"
-                    />
-
-                    <path
-                        fill="#FBBC05"
-                        d="M6.53 13.81A5.85 5.85 0 0 1 6.22 12c0-.63.11-1.24.31-1.81V7.67H3.29A9.74 9.74 0 0 0 2.25 12c0 1.57.38 3.05 1.04 4.33l3.24-2.52z"
-                    />
-
-                    <path
-                        fill="#EA4335"
-                        d="M12 6.16c1.43 0 2.71.49 3.72 1.45l2.79-2.79C16.84 3.27 14.63 2.3 12 2.3a9.74 9.74 0 0 0-8.71 5.37l3.24 2.52C7.3 7.88 9.46 6.16 12 6.16z"
-                    />
-                </svg>
-            </span>
-
-            Continue with Google
-        </button>
-
-        <!-- OR -->
-        <div class="divider">
-            <span>OR</span>
-        </div>
-
         <!-- Email Login -->
         <form id="loginForm">
 
@@ -227,81 +186,6 @@ a{
     margin:4px 0 20px;
     color:#7c8490;
     font-size:14px;
-}
-
-/* =========================
-   GOOGLE BUTTON
-========================= */
-
-.google-button{
-    width:100%;
-    height:64px;
-
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    gap:16px;
-
-    border:1.5px solid var(--border);
-    border-radius:12px;
-
-    background:#fff;
-    color:var(--ink);
-
-    font:800 17px 'Nunito',sans-serif;
-
-    cursor:pointer;
-
-    transition:
-        background .2s ease,
-        box-shadow .2s ease,
-        transform .15s ease;
-}
-
-.google-button:hover{
-    background:#fafafa;
-    box-shadow:0 3px 10px rgba(0,0,0,.06);
-}
-
-.google-button:active{
-    transform:scale(.99);
-}
-
-.google-icon{
-    width:22px;
-    height:22px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-}
-
-.google-icon svg{
-    width:22px;
-    height:22px;
-}
-
-/* =========================
-   OR DIVIDER
-========================= */
-
-.divider{
-    display:flex;
-    align-items:center;
-    gap:18px;
-
-    margin:27px 0 25px;
-
-    color:#9aa3b2;
-    font-size:15px;
-    font-weight:800;
-}
-
-.divider::before,
-.divider::after{
-    content:"";
-    height:1px;
-    flex:1;
-    background:#dfe3e8;
 }
 
 /* =========================

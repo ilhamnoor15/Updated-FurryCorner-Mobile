@@ -21,8 +21,13 @@ export class SigninPage extends LegacyPage {
    RETURN LOCATION
 ========================= */
 
+const returnParams = new URLSearchParams(location.search);
+
 const returnTo =
-    new URLSearchParams(location.search).get('return');
+    returnParams.get('return') || 'profile.html';
+
+const safeReturnTo =
+    window.FurryCornerAuth.getSafeReturnTarget(returnTo);
 
 
 /* =========================
@@ -169,8 +174,66 @@ try {
 
     const role = metadata.role || 'customer';
 
-    // Save the Supabase user ID (UUID)
-    localStorage.setItem('loggedInUserId', user.id);
+    // Preserve the guest cart before switching to the signed-in account.
+const guestCart = localStorage.getItem('cart');
+
+if (guestCart !== null) {
+    try {
+        const parsedGuestCart = JSON.parse(guestCart);
+
+        if (Array.isArray(parsedGuestCart)) {
+            localStorage.setItem(
+                'furryCornerGuestCart',
+                JSON.stringify(parsedGuestCart)
+            );
+        }
+    } catch (error) {
+        console.warn('Guest cart could not be preserved:', error);
+    }
+}
+
+// Save the Supabase user ID (UUID)
+localStorage.setItem('loggedInUserId', user.id);
+
+
+const guestCartKey = 'furryCornerGuestCart';
+const accountCartKey = `furryCornerCart:${user.id}`;
+
+try {
+    const guestCart = JSON.parse(
+        localStorage.getItem(guestCartKey) || '[]'
+    );
+    const accountCart = JSON.parse(
+        localStorage.getItem(accountCartKey) || '[]'
+    );
+
+    if (Array.isArray(guestCart) && Array.isArray(accountCart)) {
+        const mergedCart = [...accountCart];
+
+        guestCart.forEach(guestItem => {
+            const guestId = String(guestItem.id ?? guestItem.product_id ?? '');
+            if (!guestId) return;
+
+            const existingItem = mergedCart.find(
+                item => String(item.id ?? item.product_id ?? '') === guestId
+            );
+
+            if (existingItem) {
+                existingItem.quantity =
+                    Number(existingItem.quantity || 0) +
+                    Number(guestItem.quantity || 0);
+            } else {
+                mergedCart.push(guestItem);
+            }
+        });
+
+        localStorage.setItem(accountCartKey, JSON.stringify(mergedCart));
+        localStorage.removeItem(guestCartKey);
+    }
+} catch (error) {
+    console.error('Could not merge guest cart:', error);
+}
+
 
     // Save the Supabase session token
     localStorage.setItem(
@@ -210,11 +273,27 @@ try {
         })
     );
 
-    // Redirect to the requested page
-    location.href =
-        window.FurryCornerAuth.getSafeReturnTarget(
-            returnTo || 'profile.html'
-        );
+    // Preserve checkout items across sign-in.
+const pendingCheckoutItems =
+    localStorage.getItem('checkoutItems');
+
+if (returnTo === 'checkout.html' && pendingCheckoutItems) {
+    try {
+        const parsedItems = JSON.parse(pendingCheckoutItems);
+
+        if (Array.isArray(parsedItems) && parsedItems.length > 0) {
+            localStorage.setItem(
+                'checkoutItems',
+                JSON.stringify(parsedItems)
+            );
+        }
+    } catch (error) {
+        console.error('Could not preserve checkout items:', error);
+    }
+}
+
+// Navigate using the LegacyPage router shim.
+location.assign(safeReturnTo);
 
 } catch (error) {
     console.error('Supabase login request failed:', error);
@@ -234,20 +313,6 @@ try {
                 originalText;
 
         }
-
-    });
-
-/* =========================
-   GOOGLE BUTTON
-========================= */
-
-document
-    .getElementById('googleButton')
-    .addEventListener('click', () => {
-
-        alert(
-            'Google Sign-In is not connected yet.'
-        );
 
     });
 

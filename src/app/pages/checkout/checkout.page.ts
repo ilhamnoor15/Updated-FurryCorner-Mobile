@@ -269,44 +269,161 @@ savedPaymentSelect.addEventListener('change', () => {
 
 
 /* =====================================================
-   GET CART TOTAL
+   GET CART TOTAL — LOAD REAL PRODUCT PRICES
 ===================================================== */
 
-const orderTotal =
-    document.getElementById(
-        'orderTotal'
+const orderTotal = document.getElementById('orderTotal');
+
+function getItemPrice(item) {
+    const price = Number(
+        item.price ??
+        item.product_price ??
+        item.unit_price ??
+        item.selling_price ??
+        item.productPrice ??
+        item.amount ??
+        0
     );
 
-
-function updateOrderTotal(){
-
-    const items =
-        JSON.parse(
-            localStorage.getItem(
-                'checkoutItems'
-            ) || '[]'
-        );
-
-
-    const total =
-        items.reduce(
-            (sum, item) => {
-
-                return sum +
-                    (
-                        Number(item.price) *
-                        Number(item.quantity || 0)
-                    );
-
-            },
-            0
-        );
-
-
-    orderTotal.textContent =
-        '₱' + total.toFixed(2);
-
+    return Number.isFinite(price) && price > 0 ? price : 0;
 }
+
+function getItemQuantity(item) {
+    const quantity = Number(item.quantity ?? item.qty ?? 1);
+    return Number.isFinite(quantity) && quantity > 0 ? quantity : 1;
+}
+
+function getCheckoutItems() {
+    try {
+        const parsed = JSON.parse(
+            localStorage.getItem('checkoutItems') || '[]'
+        );
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+        console.error('[Checkout] Cannot read checkoutItems:', error);
+        return [];
+    }
+}
+
+async function refreshCheckoutItemsWithPrices() {
+    const items = getCheckoutItems();
+
+    if (items.length === 0) {
+        if (orderTotal) orderTotal.textContent = '₱0.00';
+        console.warn('[Checkout] checkoutItems is empty.');
+        return [];
+    }
+
+    // Keep existing prices when they are already available.
+    const needsPrice = items.some(item => getItemPrice(item) <= 0);
+
+    if (needsPrice) {
+        try {
+            const response = await fetch(
+                `${API_BASE}/getProducts.php`,
+                { method: 'GET' }
+            );
+
+            if (!response.ok) {
+                throw new Error(`Products API returned HTTP ${response.status}`);
+            }
+
+            const result = await response.json();
+
+            // Support common API response formats.
+            const products = Array.isArray(result)
+                ? result
+                : Array.isArray(result.products)
+                    ? result.products
+                    : Array.isArray(result.data)
+                        ? result.data
+                        : [];
+
+            console.log('[Checkout Debug] API success:', result.success);
+console.log('[Checkout Debug] First API product:', products[0]);
+console.log('[Checkout Debug] First checkout item:', items[0]);
+
+            const productMap = new Map();
+
+            products.forEach(product => {
+                const id = String(
+                    product.product_id ??
+                    product.id ??
+                    product.productId ??
+                    ''
+                );
+
+                const price = Number(
+                    product.price ??
+                    product.product_price ??
+                    product.unit_price ??
+                    product.selling_price ??
+                    product.productPrice ??
+                    product.amount ??
+                    0
+                );
+
+                if (id && Number.isFinite(price) && price > 0) {
+                    productMap.set(id, { ...product, resolvedPrice: price });
+                }
+            });
+
+            items.forEach(item => {
+                if (getItemPrice(item) > 0) return;
+
+                const id = String(
+                    item.product_id ??
+                    item.productId ??
+                    item.id ??
+                    ''
+                );
+
+                const product = productMap.get(id);
+
+                if (product) {
+                    item.price = product.resolvedPrice;
+                    item.product_name =
+                        item.product_name ||
+                        item.name ||
+                        product.product_name ||
+                        product.name ||
+                        'Product';
+                }
+            });
+
+            // Save the resolved prices so order placement uses the same values.
+            localStorage.setItem('checkoutItems', JSON.stringify(items));
+        } catch (error) {
+            console.error('[Checkout] Could not refresh product prices:', error);
+        }
+    }
+
+    const total = items.reduce((sum, item) => {
+        return sum + getItemPrice(item) * getItemQuantity(item);
+    }, 0);
+
+    if (orderTotal) {
+        orderTotal.textContent = '₱' + total.toFixed(2);
+    }
+
+    console.log('[Checkout] Items with prices:', items);
+    console.log('[Checkout] Calculated total:', total);
+
+    return items;
+}
+
+async function updateOrderTotal() {
+    const items = await refreshCheckoutItemsWithPrices();
+
+    const total = items.reduce((sum, item) => {
+        return sum + getItemPrice(item) * getItemQuantity(item);
+    }, 0);
+
+    if (orderTotal) {
+        orderTotal.textContent = '₱' + total.toFixed(2);
+    }
+}
+
 
 
 /* =====================================================
@@ -505,12 +622,12 @@ checkoutBtn.addEventListener(
            GET CHECKOUT ITEMS
         ================================================= */
 
-        const items =
-            JSON.parse(
-                localStorage.getItem(
-                    'checkoutItems'
-                ) || '[]'
-            );
+        const items = await refreshCheckoutItemsWithPrices();
+
+if (!items.length) {
+    alert('Your cart is empty.');
+    return;
+}
 
 
         if (
@@ -531,19 +648,16 @@ checkoutBtn.addEventListener(
            CALCULATE SUBTOTAL
         ================================================= */
 
-        const subtotal =
-            items.reduce(
-                (sum, item) => {
+        
+const subtotal = items.reduce((sum, item) => {
+    return sum + getItemPrice(item) * getItemQuantity(item);
+}, 0);
 
-                    return sum +
-                        (
-                            Number(item.price) *
-                            Number(item.quantity || 0)
-                        );
+if (subtotal <= 0) {
+    alert('Your cart total is invalid. Please return to your cart and try again.');
+    return;
+}
 
-                },
-                0
-            );
 
 
         /* =================================================
@@ -619,14 +733,21 @@ if (orderError) throw orderError;
 localStorage.setItem('lastOrderId', String(createdOrder.id));
 
 // Save order items.
-const orderItems = items.map(item => ({
-    order_id: createdOrder.id,
-    product_id: item.product_id ?? item.id ?? null,
-    product_name: item.name || item.product_name || 'Product',
-    unit_price: Number(item.price),
-    quantity: Number(item.quantity || 0),
-    line_total: Number(item.price) * Number(item.quantity || 0)
-}));
+
+const orderItems = items.map(item => {
+    const price = getItemPrice(item);
+    const quantity = getItemQuantity(item);
+
+    return {
+        order_id: createdOrder.id,
+        product_id: item.product_id ?? item.id ?? null,
+        product_name: item.name || item.product_name || 'Product',
+        unit_price: price,
+        quantity: quantity,
+        line_total: price * quantity
+    };
+});
+
 
 const { error: itemsError } = await supabase
     .from('order_items')
@@ -748,31 +869,83 @@ const response = await fetch(
 }
 
 
-/* Remove only the items included in this order.
-   Preserve all other items in the cart. */
-
-function getProductKey(item) {
-    return String(item.product_id ?? item.id ?? item.productId ?? '');
+/* Remove only purchased items from the signed-in user's cart. */
+function getPurchasedProductKey(item) {
+    return String(
+        item.product_id ??
+        item.productId ??
+        item.id ??
+        ''
+    );
 }
 
-function getCartItemKey(item) {
-    return `${getProductKey(item)}-${item.variant_id ?? item.variantId ?? ''}`;
+function getCartStorageKey() {
+    const currentUser = JSON.parse(
+        localStorage.getItem('loggedInUser') || 'null'
+    );
+
+    const currentUserId =
+        localStorage.getItem('loggedInUserId') ||
+        currentUser?.user_id ||
+        currentUser?.id;
+
+    return currentUserId
+        ? `furryCornerCart:${currentUserId}`
+        : 'cart';
 }
 
-const purchasedKeys = new Set(items.map(getCartItemKey));
-
-const cartItems = JSON.parse(
-    localStorage.getItem('cart') || '[]'
+const purchasedKeys = new Set(
+    items.map(getPurchasedProductKey)
 );
 
-const remainingCartItems = cartItems.filter(
-    cartItem => !purchasedKeys.has(getCartItemKey(cartItem))
+const cartStorageKey = getCartStorageKey();
+
+let currentCart = [];
+
+try {
+    const parsedCart = JSON.parse(
+        localStorage.getItem(cartStorageKey) || '[]'
+    );
+
+    currentCart = Array.isArray(parsedCart) ? parsedCart : [];
+} catch (error) {
+    console.error('Unable to read cart for cleanup:', error);
+}
+
+const remainingCart = currentCart.filter(item =>
+    !purchasedKeys.has(getPurchasedProductKey(item))
 );
 
-localStorage.setItem('cart', JSON.stringify(remainingCartItems));
+localStorage.setItem(
+    cartStorageKey,
+    JSON.stringify(remainingCart)
+);
 
-// Clear the checkout selection after the order is saved.
+// Keep the guest cart clean too if it contains the same purchased items.
+if (cartStorageKey !== 'cart') {
+    try {
+        const guestCart = JSON.parse(
+            localStorage.getItem('cart') || '[]'
+        );
+
+        if (Array.isArray(guestCart)) {
+            localStorage.setItem(
+                'cart',
+                JSON.stringify(
+                    guestCart.filter(item =>
+                        !purchasedKeys.has(getPurchasedProductKey(item))
+                    )
+                )
+            );
+        }
+    } catch (error) {
+        console.warn('Unable to update guest cart:', error);
+    }
+}
+
 localStorage.removeItem('checkoutItems');
+
+window.dispatchEvent(new Event('cartUpdated'));
 
 openSuccessModal();
 

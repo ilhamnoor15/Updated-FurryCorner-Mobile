@@ -29,6 +29,26 @@ export function runAuthGuard(location: any, __onReady: any): void {
     }
 
     const isAuthenticated = Boolean(token && userId && user);
+
+    function readAuth() {
+    const t = localStorage.getItem('furryCornerAuthToken') || '';
+    const id = localStorage.getItem('loggedInUserId') || '';
+
+    let u = null;
+
+    try {
+        u = JSON.parse(localStorage.getItem('loggedInUser') || 'null');
+    } catch (error) {
+        u = null;
+    }
+
+    return {
+        token: t,
+        userId: id,
+        user: u,
+        isAuthenticated: Boolean(t && id && u)
+    };
+}
     const pageName = location.pathname.split('/').pop() || 'index.html';
 
     function getSafeReturnTarget(value) {
@@ -90,18 +110,34 @@ export function runAuthGuard(location: any, __onReady: any): void {
             sessionStorage.setItem(skipAuthSplashKey, 'true');
             location.assign(signInUrl(returnTarget));
         },
-        async logout() {
-            try {
-                await window.fetch(window.FURRY_API + '/logout.php', {
-                    method: 'POST'
-                });
-            } catch (error) {
-                console.error('Server logout failed:', error);
-            }
+        
+        
+async logout() {
+    // Preserve the current account's cart under its own user ID.
+    const currentUserId = localStorage.getItem('loggedInUserId');
 
-            clearLocalSession();
-            location.assign('signin.html');
-        },
+    if (currentUserId) {
+        const accountCartKey = `furryCornerCart:${currentUserId}`;
+
+        // Keep the account cart saved, but don't expose it to guests.
+        if (localStorage.getItem(accountCartKey) === null) {
+            const currentCart = localStorage.getItem('cart');
+
+            if (currentCart !== null) {
+                localStorage.setItem(accountCartKey, currentCart);
+            }
+        }
+    }
+
+    clearLocalSession();
+
+    // Start with an empty guest cart after logout.
+    localStorage.setItem('cart', '[]');
+    localStorage.removeItem('furryCornerGuestCart');
+
+    location.assign('signin.html');
+},
+
         clearLocalSession
     };
 
@@ -272,7 +308,7 @@ function guardActions() {
 
         // Keep the sign-in requirement for protected pages and protected buttons.
         if (
-            !isAuthenticated &&
+            !readAuth().isAuthenticated &&
             (control.hasAttribute('data-auth-required') || protectedLink)
         ) {
             event.preventDefault();

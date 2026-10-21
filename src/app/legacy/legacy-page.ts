@@ -106,13 +106,27 @@ export abstract class LegacyPage implements AfterViewInit, OnDestroy {
     try {
       runAuthGuard(loc, onReady);
       this.run(loc, onReady);
-      initAiChat();
+      const currentPath = window.location.pathname.replace(/\/+$/, '');
+
+console.log('[AI CHAT DEBUG] Current path:', currentPath);
+
+if (currentPath.endsWith('/profile')) {
+  console.log('[AI CHAT DEBUG] Initializing AI chat on Profile');
+  initAiChat();
+}
     } catch (e) {
       console.error('Page script error:', e);
     }
   }
 
   ngOnDestroy() {
+    document.getElementById('fcAiRoot')?.remove();
+    // Remove the floating AI assistant when leaving its page.
+    const aiRoot =
+      document.getElementById('fcAiBtn')?.parentElement ??
+      document.getElementById('fcAiPanel')?.parentElement;
+
+    aiRoot?.remove();
     this.myTracked.forEach(t => t.target.removeEventListener(t.type, t.fn, t.opts));
     this.myIntervals.forEach(id => clearInterval(id));
     tracked = null; intervals = null;

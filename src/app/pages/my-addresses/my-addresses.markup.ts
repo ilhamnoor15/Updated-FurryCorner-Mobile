@@ -3,7 +3,15 @@
 export const TITLE = `My Addresses - FurryCorner PH`;
 export const BODY_CLASS = ``;
 
-export const HTML = `<header class="page-header"><div class="header-inner"><h1 class="page-title">My Addresses</h1><a class="back-link" href="profile.html">Back to profile</a></div></header>
+export const HTML = `<header class="page-header">
+                        <div class="header-inner">
+                            <a class="back-link" href="profile.html" aria-label="Back to My Account">
+                                <span aria-hidden="true">←</span>
+                                <span>Back</span>
+                            </a>
+                            <h1 class="page-title">My Addresses</h1>
+                        </div>
+                    </header>
 <main>
     <section aria-labelledby="address-form-title">
         <h2 class="section-title" id="address-form-title">Add an address</h2>
@@ -83,9 +91,46 @@ export const CSS = `
 body{min-height:100vh;background:var(--cream);color:var(--ink);font:600 15px 'Nunito',sans-serif;line-height:1.5;padding-bottom:36px}
 a{color:inherit;text-decoration:none}
 .page-header{background:var(--white);border-bottom:1px solid var(--border)}
-.header-inner{max-width:900px;min-height:64px;margin:auto;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px}
-.back-link{color:var(--blue-dark);font-weight:800}
-.page-title{font:800 22px 'Baloo 2',cursive;color:var(--blue-dark)}
+.header-inner{
+    max-width:900px;
+    min-height:64px;
+    margin:auto;
+    padding:10px 20px;
+    display:flex;
+    align-items:center;
+    justify-content:flex-start;
+    gap:14px;
+}
+
+.back-link{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    flex-shrink:0;
+    min-height:40px;
+    padding:0 8px;
+    border-radius:10px;
+    color:var(--blue-dark);
+    font-size:14px;
+    font-weight:800;
+    white-space:nowrap;
+}
+
+.back-link span:first-child{
+    font-size:24px;
+    line-height:1;
+}
+
+.back-link:hover{
+    background:var(--cream-light);
+}
+
+.page-title{
+    font:800 22px 'Baloo 2',cursive;
+    color:var(--blue-dark);
+    text-align:left;
+}
 main{max-width:900px;margin:28px auto;padding:0 20px;display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,.9fr);gap:24px;align-items:start}
 .section-title{font:800 21px 'Baloo 2',cursive;margin-bottom:14px}
 .address-form,.address-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px}

@@ -29,7 +29,7 @@ ${appNavbar()}
 
 <div class="hero-main-cta">
     <p>Keep those tails wagging—stock up on<br>paw-approved food, treats, and gear.</p>
-    <a href="#category-title">Stock Up Today ↓</a>
+    <a href="#category-title" id="stockUpTodayBtn">Stock Up Today ↓</a>
 </div>
 
 <div class="top-search">
@@ -1905,85 +1905,54 @@ select{
 
 .cart-alert{
     position:fixed;
-
     left:50%;
     top:50%;
-
-    transform:
-        translate(-50%,-50%)
-        scale(.85);
-
+    transform:translate(-50%,-50%) scale(.85);
     background:#fff;
-
     width:360px;
     max-width:90vw;
-
-    padding:24px 20px 18px;
-
+    padding:26px 22px 20px;
     border-radius:18px;
-
-    box-shadow:
-        0 18px 45px
-        rgba(31,36,48,.18);
-
     border:2px solid var(--blue-dark);
-
+    box-shadow:0 18px 45px rgba(31,36,48,.18);
     z-index:5000;
-
     opacity:0;
     visibility:hidden;
-
     transition:.25s ease;
-
     text-align:center;
 }
 
 .cart-alert.show{
     opacity:1;
-
     visibility:visible;
-
-    transform:
-        translate(-50%,-50%)
-        scale(1);
+    transform:translate(-50%,-50%) scale(1);
 }
 
 .cart-alert-icon{
     width:58px;
     height:58px;
-
     margin:0 auto 12px;
-
     border-radius:50%;
-
-    background:var(--danger);
-
-    color:white;
-
+    background:var(--blue-dark);
+    color:#fff;
     display:flex;
-
     align-items:center;
     justify-content:center;
-
     font-size:28px;
-
     font-weight:800;
 }
 
 .cart-alert h3{
     margin-bottom:6px;
-
     font-family:'Baloo 2',cursive;
-    font-size:28px;
-    line-height:1;
-    letter-spacing:.02em;
+    font-size:26px;
+    line-height:1.1;
+    color:var(--ink);
 }
 
 .cart-alert p{
     font-size:14px;
-
     font-weight:700;
-
     color:#586273;
 }
 
