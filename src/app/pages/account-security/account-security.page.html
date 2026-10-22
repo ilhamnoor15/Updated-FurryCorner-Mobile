@@ -1,0 +1,89 @@
+<ion-header>
+  <ion-toolbar color="light">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/profile" aria-label="Back to My Account"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Account &amp; Security</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <main class="account-page">
+    <section class="account-section" aria-labelledby="accountDetailsTitle">
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title id="accountDetailsTitle">Account details</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <form class="account-form" id="accountForm">
+            <div class="field-grid">
+              <div class="field">
+                <label for="firstName">First name</label>
+                <input id="firstName" maxlength="50" autocomplete="given-name" required>
+              </div>
+              <div class="field">
+                <label for="lastName">Last name</label>
+                <input id="lastName" maxlength="50" autocomplete="family-name" required>
+              </div>
+            </div>
+            <div class="field">
+              <label for="email">Email address</label>
+              <input id="email" type="email" maxlength="100" autocomplete="email" required>
+            </div>
+            <div class="field">
+              <label for="profileCurrentPassword">Current password</label>
+              <input id="profileCurrentPassword" type="password" autocomplete="current-password">
+              <span class="field-help">Required when saving account details.</span>
+            </div>
+            <ion-button class="action-button" id="saveAccount" type="submit" expand="block">
+              Save account details
+            </ion-button>
+            <p class="status" id="accountStatus" role="status" aria-live="polite"></p>
+          </form>
+        </ion-card-content>
+      </ion-card>
+    </section>
+
+    <section class="account-section" aria-labelledby="passwordTitle">
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title id="passwordTitle">Change password</ion-card-title>
+          <p class="section-description">We'll send a verification code to your registered email.</p>
+        </ion-card-header>
+        <ion-card-content>
+          <form class="account-form" id="passwordForm">
+            <div class="field">
+              <label for="currentPassword">Current password</label>
+              <input id="currentPassword" type="password" autocomplete="current-password" required>
+            </div>
+            <div class="field-grid">
+              <div class="field">
+                <label for="newPassword">New password</label>
+                <input id="newPassword" type="password" minlength="8" maxlength="72" autocomplete="new-password" required>
+              </div>
+              <div class="field">
+                <label for="confirmPassword">Confirm new password</label>
+                <input id="confirmPassword" type="password" minlength="8" maxlength="72" autocomplete="new-password" required>
+              </div>
+            </div>
+            <ion-button class="action-button" id="sendPasswordOtp" type="button" expand="block">
+              Send OTP to Email
+            </ion-button>
+            <div id="passwordOtpSection" hidden>
+              <div class="field otp-field">
+                <label for="passwordOtp">Email verification code</label>
+                <input id="passwordOtp" class="otp-input" type="text" inputmode="numeric"
+                  autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}"
+                  placeholder="• • • • • •" aria-label="Six-digit email verification code">
+              </div>
+              <ion-button class="action-button" id="savePassword" type="submit" expand="block">
+                Verify OTP &amp; Update Password
+              </ion-button>
+            </div>
+            <p class="status" id="passwordStatus" role="status" aria-live="polite"></p>
+          </form>
+        </ion-card-content>
+      </ion-card>
+    </section>
+  </main>
+</ion-content>
