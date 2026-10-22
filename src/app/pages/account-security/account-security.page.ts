@@ -1,20 +1,41 @@
-// @ts-nocheck  (legacy script below is plain JavaScript carried over from account-security.html)
-import { Component } from '@angular/core';
-import { LegacyPage } from '../../legacy/legacy-page';
-import { HTML, CSS, TITLE, BODY_CLASS } from './account-security.markup';
+// @ts-nocheck
+import { AfterViewInit, Component } from '@angular/core';
+import {
+  IonHeader,
+  IonToolbar,
+  IonButtons,
+  IonBackButton,
+  IonTitle,
+  IonContent,
+  IonCard,
+  IonCardHeader,
+  IonCardTitle,
+  IonCardContent,
+  IonButton
+} from '@ionic/angular';
 import { supabase } from '../../../services/supabase.service';
 
 @Component({
   selector: 'app-account-security',
   standalone: true,
-  template: '<div class="legacy-root" #host></div>',
-  styles: [':host, .legacy-root { display: contents; }'],
+  imports: [
+    IonHeader,
+    IonToolbar,
+    IonButtons,
+    IonBackButton,
+    IonTitle,
+    IonContent,
+    IonCard,
+    IonCardHeader,
+    IonCardTitle,
+    IonCardContent,
+    IonButton
+  ],
+  templateUrl: './account-security.page.html',
+  styleUrls: ['./account-security.page.scss']
 })
-export class AccountSecurityPage extends LegacyPage {
-  protected markup = { html: HTML, css: CSS, title: TITLE, bodyClass: BODY_CLASS };
-
-  // Original <script> code of account-security.html. `location` is a shim that routes through the Angular Router.
-  protected run(location: any, __onReady: any): void {
+export class AccountSecurityPage implements AfterViewInit {
+  ngAfterViewInit(): void {
 
 const accountForm = document.getElementById('accountForm');
 const passwordForm = document.getElementById('passwordForm');
@@ -393,8 +414,6 @@ setStatus(
 
 
 loadAccount();
-
-;
 
 
   }
