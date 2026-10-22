@@ -116,6 +116,18 @@ try {
     localStorage.setItem('loggedInEmail', user.email);
 
     renderSignedIn(user);
+
+    window.dispatchEvent(
+    new CustomEvent('furrycorner:profile-updated', {
+        detail: {
+            ...user,
+            full_name: profile.full_name || '',
+            phone: profile.phone || '',
+            avatar_url: profile.avatar_url || ''
+        }
+    })
+);
+
 } catch (error) {
     console.error('Profile loading failed:', error);
 
@@ -250,48 +262,183 @@ function logoutUser() {
    AVATAR
 ===================================================== */
 
-function updateProfileAvatar() {
-    const avatar = document.querySelector('.avatar');
 
+async function updateProfileAvatar() {
+    const avatar = document.getElementById('profileAvatar');
     if (!avatar) return;
 
-    if (!user) {
-        avatar.innerHTML = `
-            <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.8"
-                stroke-linecap="round"
-                stroke-linejoin="round">
-                <circle cx="12" cy="8" r="4"></circle>
-                <path d="M4 21c0-4 4-6 8-6s8 2 8 6"></path>
-            </svg>
-        `;
-        return;
-    }
-
-    const firstName = user.first_name || user.firstName || '';
-    const lastName = user.last_name || user.lastName || '';
+    const firstName = user?.first_name || user?.firstName || '';
+    const lastName = user?.last_name || user?.lastName || '';
 
     const nameParts = `${firstName} ${lastName}`
         .trim()
         .split(/\s+/)
         .filter(Boolean);
 
-    if (nameParts.length === 0) {
-        avatar.textContent = 'FC';
+    const initials = nameParts.length
+        ? nameParts[0][0] +
+          (nameParts.length > 1 ? nameParts[nameParts.length - 1][0] : '')
+        : 'FC';
+
+    avatar.textContent = initials.toUpperCase();
+
+    const photoPath = user?.avatar_url;
+
+    if (!photoPath) return;
+
+    try {
+        const { data, error } = await supabase.storage
+            .from('avatars')
+            .createSignedUrl(photoPath, 3600);
+
+        if (error) throw error;
+
+        if (data?.signedUrl) {
+            avatar.innerHTML = '';
+
+            const img = document.createElement('img');
+            img.src = data.signedUrl;
+            img.alt = 'Profile picture';
+
+            avatar.appendChild(img);
+        }
+    } catch (error) {
+        console.error('Unable to load profile photo:', error);
+    }
+}
+
+
+/* =====================================================
+   PROFILE PHOTO UPLOAD
+===================================================== */
+
+const changePhotoButton =
+    document.getElementById('changeProfilePhoto') as HTMLButtonElement | null;
+
+const profilePhotoInput =
+    document.getElementById('profilePhotoInput') as HTMLInputElement | null;
+
+changePhotoButton?.addEventListener('click', () => {
+    profilePhotoInput?.click();
+});
+
+profilePhotoInput?.addEventListener('change', async () => {
+    const file = profilePhotoInput.files?.[0];
+
+    if (!file) return;
+
+    const allowedTypes = [
+        'image/jpeg',
+        'image/png',
+        'image/webp'
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+        changePhotoButton!.textContent =
+            'Use JPG, PNG, or WebP';
+        profilePhotoInput.value = '';
         return;
     }
 
-    const initials =
-        nameParts[0][0] +
-        (nameParts.length > 1
-            ? nameParts[nameParts.length - 1][0]
-            : '');
+    if (file.size > 5 * 1024 * 1024) {
+        changePhotoButton!.textContent =
+            'Photo must be under 5 MB';
+        profilePhotoInput.value = '';
+        return;
+    }
 
-    avatar.textContent = initials.toUpperCase();
-}
+    changePhotoButton!.disabled = true;
+    changePhotoButton!.textContent = 'Uploading...';
+
+    try {
+        const {
+            data: { user: authUser },
+            error: authError
+        } = await supabase.auth.getUser();
+
+        if (authError) throw authError;
+
+        if (!authUser) {
+            throw new Error('Please sign in again before uploading a photo.');
+        }
+
+        const savedUserId =
+            localStorage.getItem('loggedInUserId');
+
+        if (savedUserId && savedUserId !== authUser.id) {
+            throw new Error('Your login session does not match. Please sign in again.');
+        }
+
+        const extensionByType: Record<string, string> = {
+            'image/jpeg': 'jpg',
+            'image/png': 'png',
+            'image/webp': 'webp'
+        };
+
+        const extension = extensionByType[file.type];
+        const photoPath =
+            `${authUser.id}/${Date.now()}.${extension}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('avatars')
+            .upload(photoPath, file, {
+                contentType: file.type,
+                upsert: false
+            });
+
+        if (uploadError) throw uploadError;
+
+        const { error: profileError } = await supabase
+            .from('profiles')
+            .update({ avatar_url: photoPath })
+            .eq('id', authUser.id);
+
+        if (profileError) throw profileError;
+
+        user = {
+            ...user,
+            id: authUser.id,
+            user_id: authUser.id,
+            avatar_url: photoPath
+        };
+
+        localStorage.setItem(
+            'loggedInUser',
+            JSON.stringify(user)
+        );
+
+        await updateProfileAvatar();
+
+        window.dispatchEvent(
+            new CustomEvent('furrycorner:profile-updated', {
+                detail: {
+                    ...user,
+                    full_name:
+                        `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+                    phone: user.phone || '',
+                    avatar_url: photoPath
+                }
+            })
+        );
+
+        changePhotoButton!.textContent = 'Photo Updated!';
+    } catch (error) {
+        console.error('Profile photo upload failed:', error);
+
+const errorMessage = (error as any)?.message || String(error);
+changePhotoButton!.textContent = errorMessage.slice(0, 45);
+        changePhotoButton!.textContent = 'Upload failed — try again';
+    } finally {
+        changePhotoButton!.disabled = false;
+        profilePhotoInput!.value = '';
+
+        setTimeout(() => {
+            if (changePhotoButton) {
+                changePhotoButton.textContent = 'Change Photo';
+            }
+        }, 2500);
+    }
+});
 
 
 

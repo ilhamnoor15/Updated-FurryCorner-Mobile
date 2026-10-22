@@ -1,4 +1,5 @@
 // @ts-nocheck  (auth-guard.js carried over; runs once per page, same as the old <script src="auth-guard.js">)
+import { supabase } from '../../services/supabase.service';
 export function runAuthGuard(location: any, __onReady: any): void {
 (function () {
     'use strict';
@@ -224,6 +225,7 @@ async logout() {
                 return;
             }
 
+
             link.setAttribute('aria-label', isAuthenticated ? `Profile: ${displayName}` : 'Sign in to continue');
 
             // Bottom tab bar: keep the tab's own icon + label. Signed out -> person icon with "Sign in".
@@ -244,6 +246,15 @@ async logout() {
                     }
                 } else if (tabLabel) {
                     tabLabel.textContent = 'Sign in';
+                }
+                return;
+            }
+
+            // Back links (e.g. on About) stay as Back. Signed out, they go Home instead of asking to sign in.
+            if (link.classList.contains('back-link')) {
+                link.setAttribute('aria-label', 'Back');
+                if (!isAuthenticated) {
+                    link.setAttribute('href', 'index.html');
                 }
                 return;
             }
@@ -359,7 +370,155 @@ function guardActions() {
             .furry-menu-item:last-child{border-bottom:0}
             .furry-menu-item:hover,.furry-menu-item:active{background:#EAF4FD}
             .furry-menu-item:focus-visible{outline:2px solid #5CA3E8;outline-offset:2px}
-            .furry-menu-item .arrow{color:#5CA3E8;font-size:20px;line-height:1}
+            .furry-menu-item .arrow{color:#5CA3E8;font-size:20px;line-height:1}      
+            .furry-menu-user{display:flex;align-items:center;gap:12px;margin:4px 4px 6px;padding:10px;border-radius:12px;background:#EAF4FD;text-decoration:none;color:#1F2430}
+            .furry-menu-avatar-wrap{position:relative;width:44px;height:44px;flex:0 0 44px}
+            .furry-menu-avatar-image{display:block;width:44px;height:44px;object-fit:cover;border-radius:50%}
+            .furry-menu-avatar-image[hidden],.furry-menu-avatar[hidden]{display:none}
+            .furry-menu-avatar{width:44px;height:44px;flex:0 0 44px;font-size:16px}
+            .furry-menu-user-details{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}
+            .furry-menu-username{font-weight:800;font-size:15px;line-height:1.2;overflow-wrap:anywhere}
+            .furry-menu-phone{font-size:12px;font-weight:600;color:#6a7280;line-height:1.3;overflow-wrap:anywhere}
+            .furry-menu-back{display:flex;align-items:center;gap:6px;margin:4px 4px 6px;padding:8px 10px;border:0;border-radius:10px;background:transparent;color:#5CA3E8;font:800 14px 'Nunito',sans-serif;cursor:pointer}
+            .furry-menu-back span{font-size:22px;line-height:1}
+            .furry-menu-guest {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin: 4px 4px 12px;
+    padding: 14px 10px;
+    border-radius: 12px;
+    background: #EAF4FD;
+}
+
+.furry-menu-guest-avatar {
+    width: 48px;
+    height: 48px;
+    font-size: 18px;
+}
+
+.furry-menu-signin {
+    display: block;
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #5CA3E8;
+    color: #fff;
+    text-align: center;
+    font-weight: 800;
+    text-decoration: none;
+}
+
+.furry-menu-signin:hover {
+    background: #438fd7;
+}
+
+.furry-menu-user {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.furry-menu-user-details {
+    align-items: center;
+}
+
+.furry-menu-username {
+    overflow-wrap: anywhere;
+}
+            .furry-menu-user {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 8px 4px 12px;
+    padding: 16px 10px;
+    border-radius: 12px;
+    background: #EAF4FD;
+    color: #1F2430;
+    text-align: center;
+}
+
+.furry-menu-avatar {
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: #7BB8F0;
+    color: #1F2430;
+    font-size: 18px;
+    font-weight: 800;
+}
+
+.furry-menu-username {
+    font-size: 15px;
+    font-weight: 800;
+    overflow-wrap: anywhere;
+}
+
+.furry-menu-guest {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    margin: 8px 4px 12px;
+    padding: 16px 10px;
+}
+
+.furry-menu-guest-logo {
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+}
+
+.furry-menu-signin {
+    display: block;
+    width: 100%;
+    padding: 11px 16px;
+    border-radius: 8px;
+    background: #5CA3E8;
+    color: #fff;
+    font-weight: 800;
+    text-align: center;
+}
+
+/* Square profile / guest card, content centered */
+.furry-menu-user,
+.furry-menu-guest {
+    box-sizing: border-box;
+    width: min(100%, 200px);
+    aspect-ratio: 1 / 1;
+    margin: 8px auto 12px;
+    padding: 14px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    text-align: center;
+    background: #EAF4FD;
+    border-radius: 16px;
+}
+
+/* Fix: remove the stretching that pushed name/avatar to the top */
+.furry-menu-user-details {
+    flex: 0 0 auto;
+    align-items: center;
+}
+
+/* Slim Sign in button */
+.furry-menu-guest .furry-menu-signin {
+    display: inline-block;
+    width: auto;
+    min-width: 0;
+    padding: 6px 22px;
+    font-size: 14px;
+    line-height: 1.3;
+    border-radius: 999px;
+}
             
         `;
 
@@ -384,37 +543,202 @@ function guardActions() {
         menuButton.setAttribute('aria-label', 'Open menu');
         menuButton.innerHTML = '<span></span><span></span><span></span>';
 
-        const menuPanel = document.createElement('aside');
+                const menuPanel = document.createElement('aside');
         menuPanel.id = 'furry-menu-panel';
         menuPanel.className = 'furry-menu-panel';
-        menuPanel.innerHTML = `
-            <a href="index.html" class="furry-menu-brand" aria-label="FurryCorner PH home"><img src="images/logo.png" alt="FurryCorner PH"></a>
-            <div class="furry-menu-section">
-                <div class="furry-menu-title">Settings</div>
-                <div class="furry-menu-list">
-                    ${isAuthenticated ? `
-                    <a class="furry-menu-item" href="notification-settings.html">Notifications <span class="arrow">›</span></a>
-                    <a class="furry-menu-item" href="privacy-settings.html">Privacy Settings <span class="arrow">›</span></a>
-                    ` : ''}
-                    <a class="furry-menu-item" href="language.html">Language <span class="arrow">›</span></a>
-                </div>
-            </div>
-            <div class="furry-menu-section">
-                <div class="furry-menu-title">Support</div>
-                <div class="furry-menu-list">
-                    <a class="furry-menu-item" href="help-center.html">Help Centre <span class="arrow">›</span></a>
-                    <a class="furry-menu-item" href="community-rules.html">Community Rules <span class="arrow">›</span></a>
-                    <a class="furry-menu-item" href="policies.html">FurryCorner Policies <span class="arrow">›</span></a>
-                </div>
-            </div>
-        `;
+
+        
+        function escapeMenuText(value) {
+            return String(value || '').replace(/[&<>"']/g, c => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[c]));
+        }
+
+        
+async function getMenuAvatarUrl(profileUser) {
+    const avatarPath = String(
+        profileUser?.avatar_url || profileUser?.avatarUrl || ''
+    ).trim();
+
+    if (!avatarPath) return '';
+
+    // Already a full URL? Use it as-is.
+    if (/^https?:\/\//i.test(avatarPath)) {
+        return avatarPath;
+    }
+
+    try {
+        const { data, error } = await supabase.storage
+            .from('avatars')
+            .createSignedUrl(avatarPath, 3600);
+
+        if (error) throw error;
+
+        return data?.signedUrl || '';
+    } catch (error) {
+        console.error('Unable to load sidebar profile photo:', error);
+        return '';
+    }
+}
+
+
+
+function buildMenuProfile(profileUser, signedAvatarUrl = '') {
+    const fullName = String(
+        profileUser?.full_name ||
+        profileUser?.fullName ||
+        (
+            (profileUser?.firstName || profileUser?.first_name || '') +
+            ' ' +
+            (profileUser?.lastName || profileUser?.last_name || '')
+        )
+    ).trim();
+
+    const displayName =
+        fullName || localStorage.getItem('loggedInName') || 'Account';
+
+    return `
+        <a href="profile.html"
+           class="furry-menu-user"
+           aria-label="Profile: ${escapeMenuText(displayName)}">
+            <span class="auth-account-avatar furry-menu-avatar">
+                ${initialsFor(displayName)}
+            </span>
+            <span class="furry-menu-user-details">
+                <span class="furry-menu-username">${escapeMenuText(displayName)}</span>
+            </span>
+        </a>
+    `;
+}
+
+
+
+        function setupMenuAvatarFallback() {
+            const avatarImage = menuPanel.querySelector('.furry-menu-avatar-image');
+            const initials = menuPanel.querySelector('.furry-menu-avatar');
+
+            if (!avatarImage || !initials) return;
+
+            const showInitials = () => {
+                avatarImage.hidden = true;
+                initials.hidden = false;
+            };
+
+            avatarImage.addEventListener('error', showInitials);
+
+            if (!avatarImage.getAttribute('src')) {
+                showInitials();
+            }
+        }
+
+        
+
+const topBlock = isAuthenticated
+    ? '<div id="furry-menu-profile-loading"></div>'
+    : `
+        <div class="furry-menu-guest">
+            <img src="images/logo.png" alt="FurryCorner PH" class="furry-menu-guest-logo">
+            <a href="signin.html" class="furry-menu-signin">Sign in</a>
+        </div>
+    `;
+
+
+
+menuPanel.innerHTML = `
+
+    ${topBlock}
+
+    <div class="furry-menu-section">
+        <div class="furry-menu-list">
+            <a class="furry-menu-item" href="about-app.html">
+                About App <span class="arrow">›</span>
+            </a>
+            <a class="furry-menu-item" href="about-products.html">
+                About Products <span class="arrow">›</span>
+            </a>
+            <a class="furry-menu-item" href="about-us.html">
+                About Us <span class="arrow">›</span>
+            </a>
+            <a class="furry-menu-item" href="developers.html">
+                Developers <span class="arrow">›</span>
+            </a>
+            <a class="furry-menu-item" href="contact.html">
+                Contact Us <span class="arrow">›</span>
+            </a>
+        </div>
+    </div>
+`;
+
+document.body.prepend(menuButton, menuPanel);
+
+// Load the signed-in user's profile and private avatar.
+if (isAuthenticated) {
+    const profileContainer = menuPanel.querySelector(
+        '#furry-menu-profile-loading'
+    );
+
+    if (profileContainer) {
+        getMenuAvatarUrl(user || {}).then(signedUrl => {
+            profileContainer.outerHTML = buildMenuProfile(
+                user || {},
+                signedUrl
+            );
+            setupMenuAvatarFallback();
+        });
+    }
+} else {
+    setupMenuAvatarFallback();
+}
 
         document.body.prepend(menuButton, menuPanel);
+
+                setupMenuAvatarFallback();
+
+        
+window.addEventListener('furrycorner:profile-updated', async event => {
+    const freshUser = event.detail || {};
+
+    const mergedUser = {
+        ...(user || {}),
+        ...freshUser
+    };
+
+    const signedUrl = await getMenuAvatarUrl(mergedUser);
+
+    const existingProfile = menuPanel.querySelector('.furry-menu-user');
+
+    if (existingProfile) {
+        existingProfile.outerHTML = buildMenuProfile(
+            mergedUser,
+            signedUrl
+        );
+    } else if (isAuthenticated) {
+        const loadingContainer = menuPanel.querySelector(
+            '#furry-menu-profile-loading'
+        );
+
+        if (loadingContainer) {
+            loadingContainer.outerHTML = buildMenuProfile(
+                mergedUser,
+                signedUrl
+            );
+        }
+    }
+
+    setupMenuAvatarFallback();
+});
+
 
         const closeMenu = () => {
             menuPanel.classList.remove('open');
             document.body.classList.remove('menu-open');
         };
+
+        menuPanel.querySelector('#furryMenuBack')?.addEventListener('click', closeMenu);
 
         menuButton.addEventListener('click', () => {
             const isOpen = menuPanel.classList.toggle('open');

@@ -3,6 +3,7 @@ import { Component } from '@angular/core';
 import { LegacyPage } from '../../legacy/legacy-page';
 import { HTML, CSS, TITLE, BODY_CLASS } from './purchase-status.markup';
 import { supabase } from '../../../services/supabase.service';
+import { notifyOrderCancelled } from '../../legacy/notify';
 
 @Component({
   selector: 'app-purchase-status',
@@ -765,7 +766,7 @@ async function cancelOrder(orderId: string) {
             .eq('user_id', user.id)
             .eq('status', 'pending')
             .eq('payment_status', 'pending')
-            .select('id')
+            .select('id, order_number')
             .maybeSingle();
 
         if (error) throw error;
@@ -775,6 +776,9 @@ async function cancelOrder(orderId: string) {
                 'This order can no longer be cancelled. Please refresh your orders.'
             );
         }
+
+        // Add an "Order cancelled" entry to the Notifications page.
+        await notifyOrderCancelled(data.id, data.order_number);
 
         await loadOrders();
     } catch (error: any) {

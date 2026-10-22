@@ -372,7 +372,17 @@ function describeMapError(error) {
     return 'OpenStreetMap address lookup is temporarily unavailable. You can still choose a point on the map or type your address manually.';
 }
 
+function ensureLeafletCss() {
+    if (document.querySelector('link[data-furry-leaflet]')) return;
+    const css = document.createElement('link');
+    css.rel = 'stylesheet';
+    css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    css.dataset.furryLeaflet = 'true';
+    document.head.appendChild(css);
+}
+
 function loadLeaflet() {
+    ensureLeafletCss();     
     if (window.L) return Promise.resolve(window.L);
     if (window.__furryLeafletPromise) return window.__furryLeafletPromise;
     window.__furryLeafletPromise = new Promise((resolve, reject) => {

@@ -2360,34 +2360,78 @@ function goToCheckout(items) {
 
 
 
-checkoutBtn.addEventListener(
-    'click',
-    () => {
 
-        if (!isLoggedIn()) {
-            return;
-        }
+checkoutBtn.addEventListener('click', () => {
+    const cart = getCart();
 
-        const cart = getCart();
+    if (!Array.isArray(cart) || cart.length === 0) {
+        console.warn('[Checkout] Cart is empty.');
+        return;
+    }
 
-        const selectedItems = cart.filter(item =>
-            selectedCartItems.has(String(item.id))
+    const loggedIn = isLoggedIn();
+
+    // Preserve selected products. For guests, if nothing is
+    // explicitly selected, use all products in their cart.
+    const selectedItems = cart.filter(item =>
+        selectedCartItems.has(String(item.id ?? item.product_id))
+    );
+
+    const itemsToCheckout = selectedItems.length > 0
+        ? selectedItems
+        : (!loggedIn ? cart : []);
+
+    if (itemsToCheckout.length === 0) {
+        alert('Please select at least one item to proceed to checkout.');
+        return;
+    }
+
+    // Save checkout items BEFORE opening the sign-in page.
+    const checkoutItems = itemsToCheckout.map(item => ({
+        ...item,
+        id: item.id ?? item.product_id,
+        name: item.name ?? item.product_name ?? 'Product',
+        price: Number(
+            item.price ??
+            item.product_price ??
+            item.unit_price ??
+            item.selling_price ??
+            0
+        ),
+        quantity: Math.max(
+            1,
+            Number(item.quantity ?? item.qty ?? 1)
+        )
+    }));
+
+    localStorage.setItem(
+        'checkoutItems',
+        JSON.stringify(checkoutItems)
+    );
+
+    console.log(
+        '[Checkout Debug] Saved before sign-in:',
+        localStorage.getItem('checkoutItems')
+    );
+
+    if (!loggedIn) {
+        // Preserve the guest cart for merging after login.
+        localStorage.setItem(
+            'furryCornerGuestCart',
+            JSON.stringify(cart)
         );
 
-        // Nothing selected
-        if (selectedItems.length === 0) {
+        location.assign(
+            'signin.html?return=' +
+            encodeURIComponent('checkout.html')
+        );
 
-            alert(
-                'Please select at least one item to proceed to checkout.'
-            );
-
-            return;
-        }
-
-        // Checkout selected items only
-        goToCheckout(selectedItems);
+        return;
     }
-);
+
+    // Signed-in users continue directly to checkout.
+    goToCheckout(checkoutItems);
+});
 
 
 /* =====================================================

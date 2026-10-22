@@ -1055,38 +1055,34 @@ async function loadNotifications() {
         }
 
         const savedNotifications =
-            (notificationResult.data || []).map(item => {
-                const type = String(
-                    item.notification_type || ''
-                ).toLowerCase();
+    (notificationResult.data || []).map(item => {
+        const raw = String(item.notification_type || '').toLowerCase();
 
-                return {
-                    id: `db-${item.id}`,
-                    title: item.title,
-                    message: item.message || '',
-                    type: type === 'payment' ? 'payment' : 'booking',
-                    category: type.includes('order')
-                        ? 'Order'
-                        : type === 'payment'
-                            ? 'Payment'
-                            : type === 'booking'
-                                ? 'Booking'
-                                : 'Notification',
-                    time: new Date(item.created_at).toLocaleString(
-                        'en-PH',
-                        {
-                            dateStyle: 'medium',
-                            timeStyle: 'short'
-                        }
-                    ),
-                    createdAt: item.created_at,
-                    read: item.is_read,
-                    source: 'database',
-                    dbId: item.id,
-                    relatedOrderId: item.related_order_id
-                };
-            });
+        let iconType = 'booking';
+        let category = 'Notification';
 
+        if (raw.includes('order'))        { iconType = 'payment'; category = 'Order'; }
+        else if (raw.includes('payment')) { iconType = 'payment'; category = 'Payment'; }
+        else if (raw.includes('booking')) { iconType = 'booking'; category = 'Booking'; }
+        else if (raw.includes('contact')) { iconType = 'message'; category = 'Message'; }
+
+        return {
+            id: `db-${item.id}`,
+            title: item.title,
+            message: item.message || '',
+            type: iconType,
+            category,
+            time: new Date(item.created_at).toLocaleString('en-PH', {
+                dateStyle: 'medium',
+                timeStyle: 'short'
+            }),
+            createdAt: item.created_at,
+            read: item.is_read,
+            source: 'database',
+            dbId: item.id,
+            relatedOrderId: item.related_order_id
+        };
+    });
         const orderNotifications =
             (orderResult.data || []).map(order => {
                 const id = `order-${order.id}`;
@@ -1273,6 +1269,12 @@ const notifIcons = {
 
         </svg>
 
+    `,
+
+        message: `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"></path>
+        </svg>
     `
 
 };
@@ -1352,8 +1354,7 @@ document.getElementById('tabCountRead').textContent =
                 data-id="${item.id}">
 
 
-                <div
-                    class="notif-icon ${item.type}">
+                <div class="notif-icon ${item.type === 'message' ? 'booking' : item.type}">
 
                     ${notifIcons[item.type]}
 

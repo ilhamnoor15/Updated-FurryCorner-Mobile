@@ -1,3 +1,4 @@
+
 <?php
 require_once __DIR__ . '/config.php';
 
@@ -88,11 +89,16 @@ if ($result['status'] < 200 || $result['status'] >= 300 ||
 $order = $result['body'][0];
 $sessionId = $order['paymongo_checkout_session_id'] ?? '';
 
-if (!is_string($sessionId) ||
-    !preg_match('/^cs_[A-Za-z0-9]+$/', $sessionId)) {
+if (
+    !is_string($sessionId) ||
+    trim($sessionId) === '' ||
+    !preg_match('/^cs_[A-Za-z0-9]+$/', trim($sessionId))
+) {
+    error_log('Payment return: Invalid checkout session for order ' . $orderId);
     reply(409, 'No valid checkout session is saved for this order.');
 }
 
+$sessionId = trim($sessionId);
 // Do not automatically update a cancelled order.
 if (strtolower((string)($order['status'] ?? '')) === 'cancelled') {
     error_log('Payment return: Paid status needs review for cancelled order ' . $orderId);
@@ -132,9 +138,8 @@ if (($session['id'] ?? '') !== $sessionId) {
     reply(502, 'PayMongo returned an unexpected checkout session.');
 }
 
-if (($attributes['status'] ?? '') !== 'paid') {
-    returnToApp($orderId, 'pending');
-}
+// A checkout session can remain active even when its payment is paid.
+// Verify the actual payment below instead of relying on session status.
 
 $payments = $attributes['payments'] ?? [];
 $paidPaymentFound = false;

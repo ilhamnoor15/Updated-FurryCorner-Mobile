@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { API_BASE } from '../config';
 import { runAuthGuard } from './auth-guard.script';
 import { WEBSITE_THEME_CSS } from './website-theme';
-import { initAiChat } from './ai-chat';
+
 
 export interface PageMarkup { html: string; css: string; title: string; bodyClass: string; }
 
@@ -106,14 +106,7 @@ export abstract class LegacyPage implements AfterViewInit, OnDestroy {
     try {
       runAuthGuard(loc, onReady);
       this.run(loc, onReady);
-      const currentPath = window.location.pathname.replace(/\/+$/, '');
-
-console.log('[AI CHAT DEBUG] Current path:', currentPath);
-
-if (currentPath.endsWith('/profile')) {
-  console.log('[AI CHAT DEBUG] Initializing AI chat on Profile');
-  initAiChat();
-}
+    
     } catch (e) {
       console.error('Page script error:', e);
     }

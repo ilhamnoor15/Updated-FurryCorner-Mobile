@@ -304,6 +304,7 @@ img{
     border:1.5px solid #e5e7eb;
     border-radius:8px;
     padding:0 14px;
+    margin-bottom:20px;   
     transition:.2s ease;
 }
 

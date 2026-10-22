@@ -1,9 +1,11 @@
-
- // @ts-nocheck
-import { Component } from '@angular/core';
+// @ts-nocheck
+import { Component, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { LegacyPage } from '../../legacy/legacy-page';
 import { HTML, CSS, TITLE, BODY_CLASS } from './bookings.markup';
+import { confirmDialog } from '../../legacy/confirm-dialog';
 import { supabase } from '../../../services/supabase.service';
+import { notifyBookingCancelled } from '../../legacy/notify';
 
 @Component({
   selector: 'app-bookings',
@@ -12,6 +14,8 @@ import { supabase } from '../../../services/supabase.service';
   styles: [':host, .legacy-root { display: contents; }']
 })
 export class BookingsPage extends LegacyPage {
+  private router = inject(Router);
+
   protected markup = {
     html: HTML,
     css: CSS,
@@ -24,12 +28,32 @@ export class BookingsPage extends LegacyPage {
 
     const message = document.getElementById('bookingsMessage');
     const list = document.getElementById('bookingsList');
+    const filters = document.getElementById('bookingFilters');
+
+    let currentFilter = 'all';
+    let currentUserId: string | null = null;
+
+    const ICON_CALENDAR =
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>';
+    const ICON_PAW =
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="10" r="1.8"/><circle cx="10" cy="6" r="1.8"/><circle cx="14" cy="6" r="1.8"/><circle cx="18" cy="10" r="1.8"/><path d="M12 12c-3 0-5 2.5-5 4.5 0 1.7 1.5 2.5 3 2.2 1-.2 1.4-.4 2-.4s1 .2 2 .4c1.5.3 3-.5 3-2.2 0-2-2-4.5-5-4.5z"/></svg>';
+
+    const FILTERS: Record<string, (s: string) => boolean> = {
+      all: () => true,
+      upcoming: (s) => ['pending', 'confirmed', 'in progress'].includes(s),
+      completed: (s) => s === 'completed',
+      cancelled: (s) => s === 'cancelled' || s === 'canceled'
+    };
 
     const showMessage = (text: string) => {
       if (message) {
         message.textContent = text;
         message.style.display = 'block';
       }
+    };
+
+    const hideMessage = () => {
+      if (message) message.style.display = 'none';
     };
 
     const escapeHtml = (value: any): string =>
@@ -77,6 +101,125 @@ export class BookingsPage extends LegacyPage {
         : 'Price unavailable';
     };
 
+    // Show/hide cards for the active chip
+    const applyFilter = () => {
+      if (!list) return;
+      const test = FILTERS[currentFilter] || FILTERS.all;
+      let visible = 0;
+
+      list.querySelectorAll('.booking-card').forEach((card: any) => {
+        const show = test(card.dataset.status);
+        card.hidden = !show;
+        if (show) visible++;
+      });
+
+      if (list.children.length > 0 && visible === 0) {
+        showMessage('No bookings in this category.');
+      } else if (list.children.length > 0) {
+        hideMessage();
+      }
+    };
+
+    const renderCard = (booking: any, serviceNames: Record<string, string>) => {
+      const serviceName =
+        serviceNames[String(booking.service_id)] || 'Pet care service';
+
+      const petDetails = [
+        booking.pet_name,
+        booking.pet_type,
+        booking.pet_breed
+      ].filter(Boolean).join(' · ');
+
+      const statusKey = String(booking.status || 'pending')
+        .replace(/[_-]+/g, ' ')
+        .toLowerCase();
+      const statusClass = 'status-' + statusKey.replace(/\s+/g, '-');
+      const canCancel = statusKey === 'pending' || statusKey === 'confirmed';
+
+      return `
+        <article class="booking-card" data-status="${escapeHtml(statusKey)}">
+          <div class="booking-top">
+            <div>
+              <h2>${escapeHtml(serviceName)}</h2>
+              <span class="booking-number">Booking #${escapeHtml(booking.id)}</span>
+            </div>
+            <span class="booking-status ${escapeHtml(statusClass)}">
+              ${escapeHtml(statusKey)}
+            </span>
+          </div>
+
+          <div class="booking-meta">
+            <div class="meta-row">
+              <span class="meta-left">
+                ${ICON_CALENDAR}
+                <span>${escapeHtml(formatDate(booking.booking_date))} · ${escapeHtml(formatTime(booking.booking_time))}</span>
+              </span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-left">
+                ${ICON_PAW}
+                <span>${escapeHtml(petDetails || 'Not specified')}</span>
+              </span>
+              <span class="booking-price">${escapeHtml(formatPrice(booking.price))}</span>
+            </div>
+          </div>
+
+          ${booking.notes ? `
+            <div class="booking-notes">
+              <span class="detail-label">Notes</span>
+              <span class="detail-value">${escapeHtml(booking.notes)}</span>
+            </div>
+          ` : ''}
+
+          <div class="booking-actions">
+            <button class="btn btn-track" type="button"
+              data-action="track" data-id="${escapeHtml(booking.id)}">
+              Track Booking
+            </button>
+            ${canCancel ? `
+              <button class="btn btn-cancel" type="button"
+                data-action="cancel" data-id="${escapeHtml(booking.id)}">
+                Cancel Booking
+              </button>
+            ` : ''}
+          </div>
+        </article>
+      `;
+    };
+
+    const cancelBooking = async (id: string, button: HTMLButtonElement) => {
+      if (!currentUserId) return;
+      const ok = await confirmDialog({
+  title: 'Cancel this booking?',
+  message: 'This action cannot be undone.'
+});
+if (!ok) return;
+
+      button.disabled = true;
+      button.textContent = 'Cancelling...';
+
+      const { data, error } = await supabase
+        .from('bookings')
+        .update({ status: 'cancelled' })
+        .eq('id', id)
+        .eq('user_id', currentUserId)
+        .select('id, pet_name')
+        .maybeSingle();
+
+      if (error) {
+        console.error('Failed to cancel booking:', error);
+        button.disabled = false;
+        button.textContent = 'Cancel Booking';
+        window.alert('We could not cancel this booking. Please try again.');
+        return;
+      }
+
+      // Add a "Booking cancelled" entry to the Notifications page.
+      await notifyBookingCancelled(id, data?.pet_name);
+
+      loadBookings();
+    };
+
     const loadBookings = async () => {
       try {
         showMessage('Loading your bookings...');
@@ -92,6 +235,7 @@ export class BookingsPage extends LegacyPage {
         }
 
         const userId = authData.user.id;
+        currentUserId = userId;
 
         const { data: bookings, error: bookingsError } = await supabase
           .from('bookings')
@@ -145,76 +289,12 @@ export class BookingsPage extends LegacyPage {
           return;
         }
 
-        list.innerHTML = bookings.map((booking: any) => {
-          const serviceName =
-            serviceNames[String(booking.service_id)] || 'Pet care service';
+        list.innerHTML = bookings
+          .map((booking: any) => renderCard(booking, serviceNames))
+          .join('');
 
-          const petDetails = [
-            booking.pet_name,
-            booking.pet_type,
-            booking.pet_breed
-          ].filter(Boolean).join(' · ');
-
-          const status = String(booking.status || 'pending')
-            .replace(/[_-]+/g, ' ');
-
-          return `
-            <article class="booking-card">
-              <div class="booking-top">
-                <div>
-                  <h2>${escapeHtml(serviceName)}</h2>
-                  <div class="booking-number">
-                    Booking #${escapeHtml(booking.id)}
-                  </div>
-                </div>
-                <span class="booking-status">
-                  ${escapeHtml(status)}
-                </span>
-              </div>
-
-              <div class="booking-details">
-                <div>
-                  <span class="detail-label">Booking date</span>
-                  <span class="detail-value">
-                    ${escapeHtml(formatDate(booking.booking_date))}
-                  </span>
-                </div>
-
-                <div>
-                  <span class="detail-label">Booking time</span>
-                  <span class="detail-value">
-                    ${escapeHtml(formatTime(booking.booking_time))}
-                  </span>
-                </div>
-
-                <div>
-                  <span class="detail-label">Pet</span>
-                  <span class="detail-value">
-                    ${escapeHtml(petDetails || 'Not specified')}
-                  </span>
-                </div>
-
-                <div>
-                  <span class="detail-label">Price</span>
-                  <span class="booking-price">
-                    ${escapeHtml(formatPrice(booking.price))}
-                  </span>
-                </div>
-              </div>
-
-              ${booking.notes ? `
-                <div class="booking-notes">
-                  <span class="detail-label">Notes</span>
-                  <span class="detail-value">
-                    ${escapeHtml(booking.notes)}
-                  </span>
-                </div>
-              ` : ''}
-            </article>
-          `;
-        }).join('');
-
-        if (message) message.style.display = 'none';
+        hideMessage();
+        applyFilter();
 
       } catch (error) {
         console.error('Unexpected bookings error:', error);
@@ -223,6 +303,36 @@ export class BookingsPage extends LegacyPage {
         );
       }
     };
+
+    // Filter chips
+    filters?.addEventListener('click', (event: any) => {
+      const chip = event.target.closest('.chip');
+      if (!chip) return;
+
+      currentFilter = chip.dataset.filter || 'all';
+      filters.querySelectorAll('.chip').forEach((c: any) => {
+        const on = c === chip;
+        c.classList.toggle('active', on);
+        c.setAttribute('aria-selected', String(on));
+      });
+      applyFilter();
+    });
+
+    // Track / Cancel buttons
+    list?.addEventListener('click', (event: any) => {
+      const button = event.target.closest('[data-action]');
+      if (!button) return;
+
+      const id = button.dataset.id;
+
+      if (button.dataset.action === 'cancel') {
+        cancelBooking(id, button);
+      }
+
+      if (button.dataset.action === 'track') {
+        this.router.navigate(['/booking-details'], { queryParams: { id } });
+      }
+    });
 
     loadBookings();
   }

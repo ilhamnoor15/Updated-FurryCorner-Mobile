@@ -44,6 +44,23 @@ export function appBottomNav(active: TabName): string {
 }
 
 /** Slim top bar used by every other page (menu pages, sign in/up, checkout, ...). */
-export function pageHeader(rightHref = 'index.html', rightLabel = 'Shop', title = 'FurryCorner PH'): string {
-  return `<header class="site-header"><div class="header-inner"><a class="brand" href="index.html"><img src="images/logo.png" alt="">${title}</a><a class="back-link" href="${rightHref}">${rightLabel}</a></div></header>`;
+
+/** Slim top bar used by secondary pages. */
+export function pageHeader(
+  rightHref = 'index.html',
+  rightLabel = 'Shop',
+  title = 'FurryCorner PH'
+): string {
+  return `
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="index.html" aria-label="FurryCorner PH home">
+          <img src="images/logo.png" alt="FurryCorner PH">
+          <span>${title}</span>
+        </a>
+        <a class="back-link" href="${rightHref}">${rightLabel}</a>
+      </div>
+    </header>
+  `;
 }
+

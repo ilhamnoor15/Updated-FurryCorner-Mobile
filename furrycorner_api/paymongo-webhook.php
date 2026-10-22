@@ -16,14 +16,11 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 if (
     !defined('PAYMONGO_WEBHOOK_SECRET_TEST') ||
-    PAYMONGO_WEBHOOK_SECRET_TEST === '' ||
-    !defined('PAYMONGO_WEBHOOK_SECRET_LIVE') ||
-    PAYMONGO_WEBHOOK_SECRET_LIVE === ''
+    PAYMONGO_WEBHOOK_SECRET_TEST === ''
 ) {
-    error_log('PayMongo webhook secrets are not configured.');
-    reply(500, ['error' => 'Webhook secrets are not configured']);
+    error_log('PayMongo test webhook secret is not configured.');
+    reply(500, ['error' => 'Test webhook secret is not configured']);
 }
-
 $rawBody = file_get_contents('php://input');
 $signatureHeader = $_SERVER['HTTP_PAYMONGO_SIGNATURE'] ?? '';
 
@@ -51,6 +48,11 @@ if (!ctype_digit($timestamp) ||
     reply(401, ['error' => 'Invalid or expired webhook timestamp']);
 }
 
+$signatureToVerify = hash_hmac(
+    'sha256',
+    $timestamp . '.' . $rawBody,
+    PAYMONGO_WEBHOOK_SECRET
+);
 
 $payload = json_decode($rawBody, true);
 
@@ -65,9 +67,19 @@ if (!is_bool($isLiveMode)) {
     reply(400, ['error' => 'Missing event mode']);
 }
 
-$webhookSecret = $isLiveMode
-    ? PAYMONGO_WEBHOOK_SECRET_LIVE
-    : PAYMONGO_WEBHOOK_SECRET_TEST;
+if ($isLiveMode) {
+    if (
+        !defined('PAYMONGO_WEBHOOK_SECRET_LIVE') ||
+        PAYMONGO_WEBHOOK_SECRET_LIVE === ''
+    ) {
+        error_log('PayMongo live webhook secret is not configured.');
+        reply(500, ['error' => 'Live webhook secret is not configured']);
+    }
+
+    $webhookSecret = PAYMONGO_WEBHOOK_SECRET_LIVE;
+} else {
+    $webhookSecret = PAYMONGO_WEBHOOK_SECRET_TEST;
+}
 
 $receivedSignature = $isLiveMode
     ? $liveSignature

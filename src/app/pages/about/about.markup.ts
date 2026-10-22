@@ -34,42 +34,61 @@ export const HTML = `<header class="page-header">
     </section>
 
     <section class="section" id="developers">
-                        <div class="section-heading"><span class="section-number">02</span><h2>Developers</h2></div>
-                        <div class="developer-grid">
-                <article class="developer-card">
-                    <img class="developer-photo" src="images/developer2.jpg" alt="Developer 1">
-                    <div class="developer-info">
-                        <h3>Buenavista, Jocielle</h3><h3>Oira, Jhamylle Rhon</h3>
-                        <p>Team Leader</p>
-                    </div>
-                </article>
+    <div class="section-heading">
+        <span class="section-number">02</span>
+        <h2>Developers</h2>
+    </div>
 
-                <article class="developer-card">
-                    <img class="developer-photo" src="images/developer1.jpg" alt="Developer 1">
-                    <div class="developer-info">
-                        <h3>Oira, Jhamylle Rhon</h3>
-                        <p>Team Member</p>
-                    </div>
-                </article>
+    <div class="developer-grid">
+        <article class="developer-card">
+            <img
+                class="developer-photo"
+                src="images/developer2.jpg"
+                alt="Jocielle F. Buenavista"
+            >
+            <div class="developer-info">
+                <h3>Jocielle F. Buenavista</h3>
+                <p class="developer-role">Project Leader &amp; UI/UX Designer</p>
+            </div>
+        </article>
 
-                <article class="developer-card">
-                    <img class="developer-photo" src="images/developer3.jpg" alt="Developer 3">
-                    <div class="developer-info">
-                        <h3>Noor, Ilham</h3>
-                        <p>Team Member</p>
-                    </div>
-                </article>
+        <article class="developer-card">
+            <img
+                class="developer-photo"
+                src="images/developer1.jpg"
+                alt="Jhamylle Rhon A. Oira"
+            >
+            <div class="developer-info">
+                <h3>Jhamylle Rhon A. Oira</h3>
+                <p class="developer-role">API Integration &amp; Security Developer</p>
+            </div>
+        </article>
 
-                <article class="developer-card">
-                    <img class="developer-photo" src="images/developer4.jpg" alt="Developer 4">
-                    <div class="developer-info">
-                        <h3>Team Member</h3>
-                        <p>Torrevillas, Gilbert Meco Mari </p>
-                    </div>
-                </article>
+        <article class="developer-card">
+            <img
+                class="developer-photo"
+                src="images/developer3.jpg"
+                alt="Ilham N. Noor"
+            >
+            <div class="developer-info">
+                <h3>Ilham N. Noor</h3>
+                <p class="developer-role">Backend &amp; API Integration Developer</p>
+            </div>
+        </article>
 
-                        </div>
-    </section>
+        <article class="developer-card">
+            <img
+                class="developer-photo"
+                src="images/developer4.jpg"
+                alt="Gilbert Meco Mari R. Torrevillas"
+            >
+            <div class="developer-info">
+                <h3>Gilbert Meco Mari R. Torrevillas</h3>
+                <p class="developer-role">UI/UX &amp; Front-End Developer</p>
+            </div>
+        </article>
+    </div>
+</section>
 
     <section class="section" id="app">
         <div class="section-heading"><span class="section-number">03</span><h2>About the App</h2></div>
@@ -181,9 +200,18 @@ h1,h2,h3,.brand{font-family:'Baloo 2',cursive}
     align-items: start;
 }
 
+.developer-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    align-items: stretch;
+}
+
 .developer-card {
     min-width: 0;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
     background: var(--white);
     border: 1px solid var(--border);
     border-radius: 12px;
@@ -200,8 +228,51 @@ h1,h2,h3,.brand{font-family:'Baloo 2',cursive}
 }
 
 .developer-info {
+    flex: 1;
     min-width: 0;
-    padding: 10px 12px 12px;
+    padding: 13px 12px 15px;
+    text-align: center;
+}
+
+.developer-info h3 {
+    font-family: 'Nunito', sans-serif;
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 760px) {
+    .developer-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .developer-photo {
+        height: 150px;
+    }
+}
+
+@media (max-width: 520px) {
+    .developer-grid {
+        gap: 10px;
+    }
+
+    .developer-photo {
+        height: 120px;
+    }
+
+    .developer-info {
+        padding: 10px 8px;
+    }
+
+    .developer-info h3 {
+        font-size: 12px;
+    }
+
+    .developer-info p {
+        font-size: 11px;
+    }
 }
 
 .developer-info h3 {
@@ -212,11 +283,13 @@ h1,h2,h3,.brand{font-family:'Baloo 2',cursive}
     overflow-wrap: anywhere;
 }
 
-.developer-info p {
-    margin-top: 3px;
-    color: var(--muted);
-    font-size: 12px;
-    line-height: 1.4;
+.developer-info .developer-role {
+    margin-top: 4px !important;
+    color: var(--blue-dark) !important;
+    font-size: 13px !important;
+    font-weight: 800 !important;
+    line-height: 1.5 !important;
+    text-align: center !important;
 }
 
 .photo-placeholder{min-height:142px;display:grid;place-items:center;background:var(--cream);color:#6a7581;font-size:12px;font-weight:800;text-transform:uppercase}

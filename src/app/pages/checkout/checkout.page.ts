@@ -298,9 +298,41 @@ function getCheckoutItems() {
         const parsed = JSON.parse(
             localStorage.getItem('checkoutItems') || '[]'
         );
-        return Array.isArray(parsed) ? parsed : [];
+
+        if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed;
+        }
+
+        // Recover checkout items from the signed-in user's cart.
+        const currentUser = JSON.parse(
+            localStorage.getItem('loggedInUser') || 'null'
+        );
+
+        const currentUserId =
+            localStorage.getItem('loggedInUserId') ||
+            currentUser?.user_id ||
+            currentUser?.id;
+
+        const cartKey = currentUserId
+            ? `furryCornerCart:${currentUserId}`
+            : 'cart';
+
+        const cart = JSON.parse(
+            localStorage.getItem(cartKey) || '[]'
+        );
+
+        if (!Array.isArray(cart) || cart.length === 0) {
+            return [];
+        }
+
+        localStorage.setItem(
+            'checkoutItems',
+            JSON.stringify(cart)
+        );
+
+        return cart;
     } catch (error) {
-        console.error('[Checkout] Cannot read checkoutItems:', error);
+        console.error('[Checkout] Cannot read cart items:', error);
         return [];
     }
 }
@@ -696,12 +728,24 @@ if (subtotal <= 0) {
 const { data: { session }, error: sessionError } =
     await supabase.auth.getSession();
 
+if (sessionError) {
+    throw sessionError;
+}
+
+if (!session) {
+    throw new Error(
+        'Your sign-in session has expired. Please sign in again.'
+    );
+}
+
+const authenticatedUserId = session.user.id;
+
 console.log('Checkout auth session exists:', !!session);
 console.log('Checkout auth user ID:', session?.user?.id);
 console.log('Checkout local user ID:', userId);
 console.log('Session error:', sessionError);
         const orderData = {
-            user_id: userId,
+            user_id: authenticatedUserId,
             payment_method: paymentMethod,
             subtotal: subtotal,
             shipping_fee: shippingFee,

@@ -20,9 +20,13 @@ ${appNavbar()}
 
         <div class="profile-head">
 
-            <div class="avatar">
-                FC
-            </div>
+            
+<div class="profile-avatar-wrap">
+    <div class="avatar" id="profileAvatar" aria-label="Profile picture">
+        FC
+    </div>
+</div>
+
 
             <div>
 
@@ -138,13 +142,6 @@ ${appNavbar()}
 
             </a>
 
-            <a class="menu-row"
-               href="language.html">
-
-                Language
-
-            </a>
-
         </section>
 
 
@@ -161,7 +158,14 @@ ${appNavbar()}
             <a class="menu-row"
                     href="help-center.html">
 
-                Help Centre
+                Help Center
+
+            </a>
+
+            <a class="menu-row"
+                    href="ai-assistant.html">
+
+                AI Assistant
 
             </a>
 
@@ -192,12 +196,11 @@ ${appNavbar()}
                 About
             </h2>
 
-            <a class="menu-row"
-               href="index.html">
+            <a class="menu-row" href="rate-us.html">
 
-                Happy with FurryCorner? Rate us!
+    Happy with FurryCorner? Rate us!
 
-            </a>
+</a>
 
             <a class="menu-row"
                     href="about.html#about-us">
@@ -540,6 +543,40 @@ a{
 
     flex-shrink:0;
 }
+    
+.profile-avatar-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.profile-avatar-wrap .avatar {
+    overflow: hidden;
+}
+
+.profile-avatar-wrap .avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.change-photo-button {
+    border: none;
+    background: transparent;
+    color: var(--blue-dark);
+    font: 800 11px 'Nunito', sans-serif;
+    cursor: pointer;
+    padding: 4px;
+}
+
+.change-photo-button:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
 
 .avatar svg{
     width:34px;
@@ -595,6 +632,40 @@ a{
 .profile-head .profile-actions .logout{
     padding:6px 4px;
     font-size:12px;
+}
+
+/* Show the full name and email instead of cutting them off */
+.profile-head > div:nth-child(2) {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+}
+
+.profile-head h1,
+.profile-head #profileName {
+  display: block !important;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  -webkit-line-clamp: unset !important;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.15 !important;
+}
+
+.profile-head p.muted,
+.profile-head #profileSubtitle {
+  display: block !important;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  -webkit-line-clamp: unset !important;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
+/* Keep the Sign out button from shrinking */
+.profile-head .profile-actions {
+  flex-shrink: 0 !important;
 }
 
 /* ================================

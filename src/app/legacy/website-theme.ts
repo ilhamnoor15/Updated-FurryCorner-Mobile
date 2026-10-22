@@ -642,22 +642,29 @@ html body.page-profile .history-link{ color:var(--blue-dark); }
    Account sub-pages, My Purchases    -> .page-header / .mobile-header  [back] title
    All of them: same height, white blurred bar, soft shadow, and they sit below the status bar.
 ===================================================== */
+
 html body .navbar,
 html body .site-header,
 html body .page-header,
-html body .mobile-header{
-  position:sticky;
-  top:0;
-  z-index:1000;
-  box-sizing:border-box;
-  margin-top:calc(-1 * var(--sat));
-  padding-top:var(--sat);
-  background:rgba(255,255,255,.94);
-  -webkit-backdrop-filter:blur(10px);
-  backdrop-filter:blur(10px);
-  border:0;
-  box-shadow:0 1px 0 rgba(31,42,68,.06),0 4px 14px rgba(31,42,68,.05);
+html body .mobile-header {
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+  margin-top: calc(-1 * var(--sat));
+  padding-top: var(--sat);
+  background: rgba(255, 255, 255, .96);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 0;
+  box-shadow: 0 1px 0 rgba(31, 42, 68, .06),
+              0 4px 14px rgba(31, 42, 68, .05);
 }
+
 /* main tabs */
 html body .navbar{
   display:flex;
